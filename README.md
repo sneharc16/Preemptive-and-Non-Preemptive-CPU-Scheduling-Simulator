@@ -1,4 +1,4 @@
-# CPU Scheduling Algorithms Implementation
+# Preemptive and Non-Preemptive CPU Scheduling Simulator
 
 A comprehensive implementation of four fundamental CPU scheduling algorithms in C programming language.
 
