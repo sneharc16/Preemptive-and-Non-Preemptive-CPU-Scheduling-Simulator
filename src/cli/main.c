@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "sched/engine.h"
 #include "sched/io.h"
@@ -16,7 +17,7 @@
 /* The four original policies, run when --algo is not given. */
 static const char *const CLASSIC[] = {"fcfs", "sjf", "srtf", "rr"};
 
-typedef enum { FORMAT_TEXT, FORMAT_CSV, FORMAT_JSON } Format;
+typedef enum { FORMAT_TEXT, FORMAT_CSV, FORMAT_JSON, FORMAT_NONE } Format;
 typedef enum { CSV_FILE_DEFAULT, CSV_FILE_EXPLICIT, CSV_FILE_OFF } CsvFileMode;
 
 typedef struct {
@@ -34,6 +35,7 @@ typedef struct {
     bool per_tick;
     bool full_metrics;
     bool gap;
+    bool timing;
     bool help;
 } Options;
 
@@ -69,7 +71,8 @@ static void print_usage(FILE *out, const char *prog) {
           "Input and output:\n"
           "  --input=FILE      read a CSV workload (columns pid,arrival,burst|bursts and\n"
           "                    optional priority,tickets,nice)\n"
-          "  --format=FMT      stdout format: text (default), csv or json\n"
+          "  --format=FMT      stdout format: text (default), csv, json, or none (benchmarks)\n"
+          "  --timing          print each policy's simulation wall time to stderr\n"
           "  --metrics=M       basic (default) or full: percentiles, slowdown, fairness, ...\n"
           "  --gap             report each policy's optimality gap against opt-np\n"
           "  --csv=FILE        also write per-process metrics as CSV to FILE; in text format\n"
@@ -231,8 +234,10 @@ static SchedStatus parse_option(Options *opt, const char *arg, SchedError *err) 
             opt->format = FORMAT_CSV;
         } else if (strcmp(v, "json") == 0) {
             opt->format = FORMAT_JSON;
+        } else if (strcmp(v, "none") == 0) {
+            opt->format = FORMAT_NONE;
         } else {
-            USAGE_ERROR("--format must be text, csv or json (got '%s')", v);
+            USAGE_ERROR("--format must be text, csv, json or none (got '%s')", v);
         }
     } else if ((v = flag_value(arg, "--metrics="))) {
         if (strcmp(v, "basic") == 0) {
@@ -249,6 +254,8 @@ static SchedStatus parse_option(Options *opt, const char *arg, SchedError *err) 
     } else if ((v = flag_value(arg, "--summary-csv="))) {
         if (!*v) USAGE_ERROR("--summary-csv needs a file name");
         opt->summary_csv_path = v;
+    } else if (strcmp(arg, "--timing") == 0) {
+        opt->timing = true;
     } else if (strcmp(arg, "--gap") == 0) {
         opt->gap = true;
     } else if (strcmp(arg, "--no-csv") == 0) {
@@ -358,6 +365,8 @@ static SchedStatus write_stdout(const Options *opt, const ReportRun *run, const 
     case FORMAT_JSON:
         write_json(stdout, run, items, count);
         break;
+    case FORMAT_NONE:
+        break;
     }
     return fflush(stdout) == 0 && !ferror(stdout) ? SCHED_OK : SCHED_E_IO;
 }
@@ -388,7 +397,14 @@ static SchedStatus run(const Options *opt, SchedError *err) {
 
     for (size_t i = 0; st == SCHED_OK && i < policy_count(); i++) {
         if (!opt->selected[i]) continue;
+        struct timespec t0, t1;
+        timespec_get(&t0, TIME_UTC);
         st = sim_run(&w, policy_at(i), &opt->params, &opt->sim, &results[count], err);
+        timespec_get(&t1, TIME_UTC);
+        if (st == SCHED_OK && opt->timing) {
+            double secs = (double)(t1.tv_sec - t0.tv_sec) + (double)(t1.tv_nsec - t0.tv_nsec) / 1e9;
+            fprintf(stderr, "timing %s %.6f\n", policy_at(i)->name, secs);
+        }
         if (st == SCHED_OK) count++;
     }
     for (size_t i = 0; i < count; i++) items[i] = (ReportItem){.sim = &results[i]};

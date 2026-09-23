@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CPU Scheduling Simulator</title>
+  <meta name="description" content="Interactive CPU scheduling simulator: compare FCFS, SJF, SRTF, Round Robin, priority, HRRN, MLFQ, lottery, stride and CFS-lite on your own workload. The C engine runs in your browser as WebAssembly.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='3' width='6' height='4' rx='1' fill='%232a78d6'/%3E%3Crect x='7' y='3' width='8' height='4' rx='1' fill='%23eb6834'/%3E%3Crect x='3' y='9' width='10' height='4' rx='1' fill='%231baf7a'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>CPU Scheduling Simulator</h1>
+      <p class="sub">The same C engine as the command-line tool, compiled to WebAssembly and running in your browser.</p>
+    </div>
+    <div class="top-actions">
+      <a href="https://github.com/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator">Source on GitHub</a>
+      <button id="theme" type="button" class="ghost" aria-label="Toggle light or dark theme">Theme: system</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" aria-labelledby="wl-title">
+      <div class="panel-head">
+        <h2 id="wl-title">Workload</h2>
+        <label class="inline">Preset
+          <select id="preset"></select>
+        </label>
+      </div>
+      <p id="preset-note" class="note"></p>
+      <div class="table-wrap">
+        <table id="procs" class="procs">
+          <thead>
+            <tr><th>PID</th><th>Arrival</th><th title="CPU burst, or cpu:io:cpu:... phases">Bursts</th><th>Priority</th><th>Tickets</th><th>Nice</th><th><span class="sr">Remove</span></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="row">
+        <button id="add" type="button" class="ghost">+ Add process</button>
+        <span class="hint">Bursts: a number, or <code>cpu:io:cpu</code> phases such as <code>3:5:2</code>.</span>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="pol-title">
+      <h2 id="pol-title">Policies and machine</h2>
+      <fieldset id="algos" class="algos"><legend class="sr">Policies to compare</legend></fieldset>
+      <div class="params">
+        <label>Quantum <input id="quantum" type="number" min="1" value="2"></label>
+        <label>Switch cost <input id="cs" type="number" min="0" value="0"></label>
+        <label>Cores <input id="cores" type="number" min="1" max="8" value="1"></label>
+        <label>Aging period <input id="aging" type="number" min="0" value="0" title="0 = off"></label>
+        <label>MLFQ boost <input id="boost" type="number" min="0" value="0" title="0 = off"></label>
+        <label>Lottery seed <input id="seed" type="number" min="0" value="1"></label>
+      </div>
+      <p id="error" class="error" role="alert" hidden></p>
+    </section>
+
+    <section class="panel wide" aria-labelledby="gantt-title">
+      <div class="panel-head">
+        <h2 id="gantt-title">Gantt charts</h2>
+        <div class="player">
+          <button id="play" type="button" aria-label="Play">Play</button>
+          <input id="scrub" type="range" min="0" max="100" value="100" aria-label="Time">
+          <span id="clock" class="clock">t = 0</span>
+          <label class="inline">Speed
+            <select id="speed"><option value="4">slow</option><option value="12" selected>normal</option><option value="40">fast</option></select>
+          </label>
+        </div>
+      </div>
+      <div id="legend" class="legend" aria-label="Process colours"></div>
+      <div id="charts" class="charts"></div>
+    </section>
+
+    <section class="panel wide" aria-labelledby="m-title">
+      <h2 id="m-title">Metrics</h2>
+      <div class="table-wrap">
+        <table id="metrics" class="metrics"></table>
+      </div>
+      <p class="note" id="metrics-note"></p>
+    </section>
+  </main>
+
+  <div id="tip" class="tip" role="tooltip" hidden></div>
+  <footer>
+    <p>Model: integer ticks; one shared ready queue; switch cost charged when a core changes process. See <a href="https://github.com/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/blob/main/docs/model.md">docs/model.md</a>.</p>
+  </footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
