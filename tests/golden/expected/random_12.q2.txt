@@ -1,0 +1,39 @@
+Number of Processes: Enter details for each process on its own line: PID Arrival Burst
+
+FCFS (FIFO) Scheduling =>
+Gantt — FCFS:
+[0  ,1  ) IDLE  | [1  ,3  ) P38  | [3  ,17 ) P65  | [17 ,24 ) P84  | [24 ,31 ) P75  | [31 ,42 ) P72  | [42 ,47 ) P29  | [47 ,59 ) P11  | [59 ,72 ) P21  | [72 ,78 ) P50  | [78 ,83 ) P18  | [83 ,89 ) P62  | [89 ,102) P44  
+
+FCFS Averages:
+  Response:  30.58
+  Waiting :  30.58
+  Turnaround:39.00
+
+SJF (Non-preemptive) Scheduling =>
+Gantt — SJF:
+[1  ,3  ) P38  | [3  ,10 ) P84  | [10 ,17 ) P75  | [17 ,22 ) P29  | [22 ,28 ) P50  | [28 ,33 ) P18  | [33 ,39 ) P62  | [39 ,50 ) P72  | [50 ,62 ) P11  | [62 ,75 ) P21  | [75 ,88 ) P44  | [88 ,102) P65  
+
+SJF Averages:
+  Response:  20.75
+  Waiting :  20.75
+  Turnaround:29.17
+
+SRTF (Preemptive SJF) Scheduling =>
+Gantt — SRTF:
+[1  ,3  ) P38  | [3  ,10 ) P84  | [10 ,17 ) P75  | [17 ,22 ) P29  | [22 ,28 ) P50  | [28 ,33 ) P18  | [33 ,39 ) P62  | [39 ,50 ) P72  | [50 ,62 ) P11  | [62 ,75 ) P21  | [75 ,88 ) P44  | [88 ,102) P65  
+
+SRTF Averages:
+  Response:  20.75
+  Waiting :  20.75
+  Turnaround:29.17
+
+Round Robin Scheduling (q=2) =>
+Gantt — RoundRobin(q=2):
+[1  ,3  ) P38  | [3  ,5  ) P65  | [5  ,7  ) P84  | [7  ,9  ) P65  | [9  ,11 ) P84  | [11 ,13 ) P75  | [13 ,15 ) P65  | [15 ,17 ) P84  | [17 ,19 ) P72  | [19 ,21 ) P75  | [21 ,23 ) P65  | [23 ,25 ) P29  | [25 ,26 ) P84  | [26 ,28 ) P11  | [28 ,30 ) P72  | [30 ,32 ) P21  | [32 ,34 ) P75  | [34 ,36 ) P50  | [36 ,38 ) P65  | [38 ,40 ) P18  | [40 ,42 ) P29  | [42 ,44 ) P62  | [44 ,46 ) P44  | [46 ,48 ) P11  | [48 ,50 ) P72  | [50 ,52 ) P21  | [52 ,53 ) P75  | [53 ,55 ) P50  | [55 ,57 ) P65  | [57 ,59 ) P18  | [59 ,60 ) P29  | [60 ,62 ) P62  | [62 ,64 ) P44  | [64 ,66 ) P11  | [66 ,68 ) P72  | [68 ,70 ) P21  | [70 ,72 ) P50  | [72 ,74 ) P65  | [74 ,75 ) P18  | [75 ,77 ) P62  | [77 ,79 ) P44  | [79 ,81 ) P11  | [81 ,83 ) P72  | [83 ,85 ) P21  | [85 ,87 ) P44  | [87 ,89 ) P11  | [89 ,90 ) P72  | [90 ,92 ) P21  | [92 ,94 ) P44  | [94 ,96 ) P11  | [96 ,98 ) P21  | [98 ,100) P44  | [100,101) P21  | [101,102) P44  
+
+RoundRobin(q=2) Averages:
+  Response:  7.92
+  Waiting :  45.75
+  Turnaround:54.17
+
+CSV written: out.csv

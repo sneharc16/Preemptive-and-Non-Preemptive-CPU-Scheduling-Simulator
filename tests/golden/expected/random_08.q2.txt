@@ -1,0 +1,39 @@
+Number of Processes: Enter details for each process on its own line: PID Arrival Burst
+
+FCFS (FIFO) Scheduling =>
+Gantt — FCFS:
+[0  ,2  ) IDLE  | [2  ,15 ) P47  | [15 ,18 ) P91  | [18 ,27 ) P88  | [27 ,36 ) P73  | [36 ,41 ) P75  | [41 ,53 ) P19  | [53 ,59 ) P5   | [59 ,72 ) P55  | [72 ,74 ) P82  | [74 ,80 ) P4   | [80 ,82 ) P99  | [82 ,92 ) P37  
+
+FCFS Averages:
+  Response:  29.33
+  Waiting :  29.33
+  Turnaround:36.83
+
+SJF (Non-preemptive) Scheduling =>
+Gantt — SJF:
+[2  ,15 ) P47  | [15 ,18 ) P91  | [18 ,23 ) P75  | [23 ,25 ) P82  | [25 ,31 ) P5   | [31 ,33 ) P99  | [33 ,39 ) P4   | [39 ,48 ) P88  | [48 ,57 ) P73  | [57 ,67 ) P37  | [67 ,79 ) P19  | [79 ,92 ) P55  
+
+SJF Averages:
+  Response:  19.17
+  Waiting :  19.17
+  Turnaround:26.67
+
+SRTF (Preemptive SJF) Scheduling =>
+Gantt — SRTF:
+[2  ,7  ) P47  | [7  ,10 ) P91  | [10 ,18 ) P47  | [18 ,19 ) P75  | [19 ,21 ) P82  | [21 ,25 ) P75  | [25 ,27 ) P5   | [27 ,29 ) P99  | [29 ,33 ) P5   | [33 ,39 ) P4   | [39 ,48 ) P88  | [48 ,57 ) P73  | [57 ,67 ) P37  | [67 ,79 ) P19  | [79 ,92 ) P55  
+
+SRTF Averages:
+  Response:  17.83
+  Waiting :  18.42
+  Turnaround:25.92
+
+Round Robin Scheduling (q=2) =>
+Gantt — RoundRobin(q=2):
+[2  ,8  ) P47  | [8  ,10 ) P91  | [10 ,12 ) P47  | [12 ,13 ) P91  | [13 ,15 ) P47  | [15 ,17 ) P88  | [17 ,19 ) P73  | [19 ,21 ) P47  | [21 ,23 ) P75  | [23 ,25 ) P19  | [25 ,27 ) P88  | [27 ,29 ) P5   | [29 ,31 ) P55  | [31 ,33 ) P82  | [33 ,35 ) P73  | [35 ,36 ) P47  | [36 ,38 ) P75  | [38 ,40 ) P19  | [40 ,42 ) P4   | [42 ,44 ) P99  | [44 ,46 ) P88  | [46 ,48 ) P37  | [48 ,50 ) P5   | [50 ,52 ) P55  | [52 ,54 ) P73  | [54 ,55 ) P75  | [55 ,57 ) P19  | [57 ,59 ) P4   | [59 ,61 ) P88  | [61 ,63 ) P37  | [63 ,65 ) P5   | [65 ,67 ) P55  | [67 ,69 ) P73  | [69 ,71 ) P19  | [71 ,73 ) P4   | [73 ,74 ) P88  | [74 ,76 ) P37  | [76 ,78 ) P55  | [78 ,79 ) P73  | [79 ,81 ) P19  | [81 ,83 ) P37  | [83 ,85 ) P55  | [85 ,87 ) P19  | [87 ,89 ) P37  | [89 ,92 ) P55  
+
+RoundRobin(q=2) Averages:
+  Response:  7.83
+  Waiting :  36.92
+  Turnaround:44.42
+
+CSV written: out.csv

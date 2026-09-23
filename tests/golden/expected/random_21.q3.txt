@@ -1,0 +1,39 @@
+Number of Processes: Enter details for each process on its own line: PID Arrival Burst
+
+FCFS (FIFO) Scheduling =>
+Gantt — FCFS:
+[0  ,5  ) IDLE  | [5  ,7  ) P9   | [7  ,22 ) P43  | [22 ,34 ) P30  | [34 ,47 ) P57  | [47 ,59 ) P96  | [59 ,62 ) P40  | [62 ,76 ) P25  
+
+FCFS Averages:
+  Response:  20.71
+  Waiting :  20.71
+  Turnaround:30.86
+
+SJF (Non-preemptive) Scheduling =>
+Gantt — SJF:
+[5  ,7  ) P9   | [7  ,19 ) P30  | [19 ,31 ) P96  | [31 ,34 ) P40  | [34 ,47 ) P57  | [47 ,61 ) P25  | [61 ,76 ) P43  
+
+SJF Averages:
+  Response:  16.14
+  Waiting :  16.14
+  Turnaround:26.29
+
+SRTF (Preemptive SJF) Scheduling =>
+Gantt — SRTF:
+[5  ,7  ) P9   | [7  ,19 ) P30  | [19 ,20 ) P96  | [20 ,23 ) P40  | [23 ,34 ) P96  | [34 ,47 ) P57  | [47 ,61 ) P25  | [61 ,76 ) P43  
+
+SRTF Averages:
+  Response:  14.57
+  Waiting :  15.00
+  Turnaround:25.14
+
+Round Robin Scheduling (q=3) =>
+Gantt — RoundRobin(q=3):
+[5  ,7  ) P9   | [7  ,10 ) P43  | [10 ,13 ) P30  | [13 ,16 ) P43  | [16 ,19 ) P57  | [19 ,22 ) P30  | [22 ,25 ) P43  | [25 ,28 ) P96  | [28 ,31 ) P57  | [31 ,34 ) P40  | [34 ,37 ) P30  | [37 ,40 ) P25  | [40 ,43 ) P43  | [43 ,46 ) P96  | [46 ,49 ) P57  | [49 ,52 ) P30  | [52 ,55 ) P25  | [55 ,58 ) P43  | [58 ,61 ) P96  | [61 ,64 ) P57  | [64 ,67 ) P25  | [67 ,70 ) P96  | [70 ,71 ) P57  | [71 ,76 ) P25  
+
+RoundRobin(q=3) Averages:
+  Response:  5.71
+  Waiting :  29.43
+  Turnaround:39.57
+
+CSV written: out.csv
