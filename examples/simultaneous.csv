@@ -1,0 +1,7 @@
+# README test case 2: every process arrives at t=0.
+pid,arrival,burst
+1,0,4
+2,0,2
+3,0,6
+4,0,3
+5,0,1
