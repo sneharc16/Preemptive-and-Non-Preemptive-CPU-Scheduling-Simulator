@@ -318,18 +318,19 @@ static void test_context_switch_cost(void) {
     sim_result_free(&r);
     workload_free(&w);
 
-    /* SRTF: P3 arrives while P2 is being switched in, so the engine re-decides
-     * when the switch ends and switches again to the shorter P3. */
+    /* SRTF: P3 arrives while P2 is being switched in. P2 still runs one tick
+     * after the switch, then the engine re-decides and switches to P3. */
     o.cs_cost = 2;
     Triple three[] = {{1, 0, 10}, {2, 1, 5}, {3, 2, 1}};
     w = workload_of(three, 3);
     r = run_opts(&w, "srtf", 2, &o);
-    const Seg srtf[] = {{0, 1, 1, false}, {1, 3, 2, true},   {3, 5, 3, true},   {5, 6, 3, false},
-                        {6, 8, 2, true},  {8, 13, 2, false}, {13, 15, 1, true}, {15, 24, 1, false}};
-    check_timeline(&r, srtf, 8);
+    const Seg srtf[] = {{0, 1, 1, false},  {1, 3, 2, true},   {3, 4, 2, false},
+                        {4, 6, 3, true},   {6, 7, 3, false},  {7, 9, 2, true},
+                        {9, 13, 2, false}, {13, 15, 1, true}, {15, 24, 1, false}};
+    check_timeline(&r, srtf, 9);
     CHECK_EQ_I64(r.switches, 4);
     CHECK_EQ_I64(r.cs_time, 8);
-    CHECK_EQ_I64(r.outcomes[1].start, 8);
+    CHECK_EQ_I64(r.outcomes[1].start, 3);
     sim_result_free(&r);
     workload_free(&w);
 }
@@ -574,7 +575,8 @@ static void test_deadline_and_deliberate_idle(void) {
     sim_result_free(&r);
     workload_free(&w);
 
-    /* A deadline that passes during the switch-in hands the process back unrun. */
+    /* A deadline that passes during the switch-in still lets the process run
+     * one tick; the slice then ends and the policy picks P2 again. */
     Triple two[] = {{1, 0, 2}, {2, 0, 2}};
     w = workload_of(two, 2);
     r = run_recorder(&w, 3);

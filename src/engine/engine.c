@@ -35,6 +35,7 @@ typedef struct {
     bool recheck;       /* a ready event happened during the switch-in */
     int64_t busy_until; /* end of the switch or of the run slice */
     int64_t run_start;  /* start of the current run slice */
+    int64_t run_end;    /* when the slice ends if its deadline does not cut it */
     int64_t length;     /* requested slice length */
     int64_t deadline;   /* absolute slice deadline */
     size_t context;     /* last process dispatched on this core */
@@ -162,8 +163,9 @@ static void burst_done(Engine *e, size_t p, int64_t ran) {
     if (e->policy->on_block) e->policy->on_block(e->state, p, ran);
 }
 
-/* Ends the run slice on core c at now (naturally or by interruption). */
-static void end_run(Engine *e, size_t c) {
+/* Ends the run slice on core c at now (naturally or by interruption).
+ * Returns true if the process went back to the ready set. */
+static bool end_run(Engine *e, size_t c) {
     Core *core = &e->cores[c];
     size_t p = core->proc;
     int64_t ran = e->view.now - core->run_start;
@@ -173,10 +175,11 @@ static void end_run(Engine *e, size_t c) {
     core->free_since = e->view.now;
     if (e->remaining[p] == 0) {
         burst_done(e, p, ran);
-    } else {
-        assert(e->policy->on_preempt && "run-to-completion policy was preempted");
-        e->policy->on_preempt(e->state, p, ran);
+        return false;
     }
+    assert(e->policy->on_preempt && "run-to-completion policy was preempted");
+    e->policy->on_preempt(e->state, p, ran);
+    return true;
 }
 
 static void begin_run(Engine *e, size_t c) {
@@ -187,8 +190,8 @@ static void begin_run(Engine *e, size_t c) {
     core->run_start = now;
     if (e->out->outcomes[p].start < 0) e->out->outcomes[p].start = now;
     int64_t len = core->length < e->remaining[p] ? core->length : e->remaining[p];
-    int64_t end = add_time(e, now, len);
-    core->busy_until = core->deadline < end ? core->deadline : end;
+    core->run_end = add_time(e, now, len);
+    core->busy_until = core->deadline < core->run_end ? core->deadline : core->run_end;
 }
 
 static void dispatch_one(Engine *e, size_t c, const Slice *s) {
@@ -246,35 +249,44 @@ static void dispatch(Engine *e) {
 static void process_instant(Engine *e) {
     const int64_t now = e->view.now;
     const size_t ncores = e->opt->cores;
+    bool cut = false; /* a deadline (on a running or switching core) is due now */
+    for (size_t c = 0; c < ncores; c++) {
+        cut |= e->cores[c].proc != SCHED_NONE && e->cores[c].deadline == now;
+    }
     bool ready = admit_arrivals(e);
     ready |= wake_blocked(e);
-    for (size_t c = 0; c < ncores; c++) {
-        if (ready && e->cores[c].proc != SCHED_NONE && e->cores[c].in_cs)
-            e->cores[c].recheck = true;
-    }
-    for (size_t c = 0; c < ncores; c++) {
+    bool requeued = false;
+    for (size_t c = 0; c < ncores; c++) { /* slices that ran their full length */
         Core *core = &e->cores[c];
-        if (core->proc != SCHED_NONE && !core->in_cs && core->busy_until == now) end_run(e, c);
+        if (core->proc != SCHED_NONE && !core->in_cs && core->run_end == now) {
+            requeued |= end_run(e, c);
+        }
     }
+    /* For preempt_on_ready policies the running set is re-chosen globally
+     * whenever the ready set gained a process (arrival, I/O completion, or a
+     * slice handed back on any core) or a deadline fell due. Cores that are
+     * still switching in cannot be interrupted; they are marked instead. */
+    bool redecide = e->policy->preempt_on_ready && (ready || requeued || cut);
     for (size_t c = 0; c < ncores; c++) {
+        if (redecide && e->cores[c].proc != SCHED_NONE && e->cores[c].in_cs) {
+            e->cores[c].recheck = true;
+        }
+    }
+    for (size_t c = 0; c < ncores; c++) { /* switch-ins that finished */
         Core *core = &e->cores[c];
         if (core->proc == SCHED_NONE || !core->in_cs || core->busy_until != now) continue;
-        if ((e->policy->preempt_on_ready && core->recheck) || core->deadline <= now) {
-            size_t p = core->proc;
-            core->proc = SCHED_NONE;
-            core->in_cs = false;
-            core->free_since = now;
-            assert(e->policy->on_preempt);
-            e->policy->on_preempt(e->state, p, 0);
-        } else {
-            begin_run(e, c);
-        }
+        /* The switched-in process always runs at least one tick, so switching
+         * cannot livelock; a reason to re-decide that arose during the switch
+         * takes effect after that tick. */
+        if (core->recheck || core->deadline <= now) core->deadline = add_time(e, now, 1);
+        begin_run(e, c);
     }
-    if (ready && e->policy->preempt_on_ready) {
-        for (size_t c = 0; c < ncores; c++) {
-            Core *core = &e->cores[c];
-            if (core->proc != SCHED_NONE && !core->in_cs && core->run_start < now) end_run(e, c);
-        }
+    /* Interruptions: slices cut by their deadline, and every running slice
+     * when re-deciding. */
+    for (size_t c = 0; c < ncores; c++) {
+        Core *core = &e->cores[c];
+        if (core->proc == SCHED_NONE || core->in_cs || core->run_start == now) continue;
+        if (redecide || core->busy_until == now) end_run(e, c);
     }
 }
 
@@ -285,9 +297,12 @@ static int64_t next_event(const Engine *e) {
         t = e->wake[e->blocked.items[0]];
     }
     for (size_t c = 0; c < e->opt->cores; c++) {
-        if (e->cores[c].proc != SCHED_NONE && e->cores[c].busy_until < t) {
-            t = e->cores[c].busy_until;
-        }
+        const Core *core = &e->cores[c];
+        if (core->proc == SCHED_NONE) continue;
+        if (core->busy_until < t) t = core->busy_until;
+        /* A deadline marks a change in the policy's view (e.g. aging), so it
+         * is an event even while its core is still switching in. */
+        if (core->deadline > e->view.now && core->deadline < t) t = core->deadline;
     }
     return t;
 }
@@ -381,6 +396,7 @@ SchedStatus sim_run(const Workload *w, const Policy *policy, const PolicyParams 
     e.view = (SchedView){.procs = w->items,
                          .n = n,
                          .cores = ncores,
+                         .cs_cost = options->cs_cost,
                          .now = out->first_arrival,
                          .remaining = e.remaining,
                          .burst_len = e.burst_len,
