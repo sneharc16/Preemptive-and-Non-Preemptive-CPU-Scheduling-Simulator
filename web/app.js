@@ -334,17 +334,19 @@ const policyName = (a) => (POLICIES.find(([k]) => k === a) || [a, a])[1];
 const fmt = (v) => (Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(2));
 
 function renderMetrics(results, doc, notes) {
+  // [header, value, which is best, decimals]: averages and ratios always show
+  // two decimals, tick counts none, so a column reads consistently.
   const cols = [
-    ["Mean turnaround", (r) => r.summary.turnaround.mean, "min"],
-    ["Mean waiting", (r) => r.summary.waiting.mean, "min"],
-    ["Mean response", (r) => r.summary.response.mean, "min"],
-    ["p95 turnaround", (r) => r.summary.turnaround.p95, "min"],
-    ["Max waiting", (r) => r.summary.waiting.max, "min"],
-    ["Jain fairness", (r) => r.summary.jain_fairness_slowdown, "max"],
-    ["Context switches", (r) => r.summary.context_switches, "min"],
+    ["Mean turnaround", (r) => r.summary.turnaround.mean, "min", 2],
+    ["Mean waiting", (r) => r.summary.waiting.mean, "min", 2],
+    ["Mean response", (r) => r.summary.response.mean, "min", 2],
+    ["p95 turnaround", (r) => r.summary.turnaround.p95, "min", 0],
+    ["Max waiting", (r) => r.summary.waiting.max, "min", 0],
+    ["Jain fairness", (r) => r.summary.jain_fairness_slowdown, "max", 2],
+    ["Context switches", (r) => r.summary.context_switches, "min", 0],
   ];
   if (results.every((r) => "optimality_gap_pct" in r)) {
-    cols.push(["Gap vs optimum (%)", (r) => r.optimality_gap_pct, "none"]);
+    cols.push(["Gap vs optimum (%)", (r) => r.optimality_gap_pct, "none", 2]);
   }
   const table = $("metrics");
   table.replaceChildren();
@@ -363,10 +365,10 @@ function renderMetrics(results, doc, notes) {
   for (const r of results) {
     const tr = body.insertRow();
     tr.insertCell().textContent = policyName(r.algorithm);
-    cols.forEach(([, f], i) => {
+    cols.forEach(([, f, , decimals], i) => {
       const td = tr.insertCell();
       const v = f(r);
-      td.textContent = Number.isInteger(v) ? v : fmt(v);
+      td.textContent = v.toFixed(decimals);
       if (best[i] !== null && results.length > 1 && v === best[i]) td.className = "best";
     });
   }
