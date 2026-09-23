@@ -1,0 +1,9 @@
+Algorithm,PID,Arrival,Burst,Start,Completion,Response,Waiting,Turnaround
+FCFS,78,30,13,35,48,5,5,18
+FCFS,99,21,14,21,35,0,0,14
+SJF,78,30,13,35,48,5,5,18
+SJF,99,21,14,21,35,0,0,14
+SRTF,78,30,13,35,48,5,5,18
+SRTF,99,21,14,21,35,0,0,14
+RoundRobin(q=5),78,30,13,31,48,1,5,18
+RoundRobin(q=5),99,21,14,21,40,0,5,19

@@ -1,0 +1,39 @@
+Number of Processes: Enter details for each process on its own line: PID Arrival Burst
+
+FCFS (FIFO) Scheduling =>
+Gantt — FCFS:
+[0  ,15 ) P84  | [15 ,22 ) P54  | [22 ,28 ) P88  | [28 ,30 ) P67  | [30 ,39 ) P35  | [39 ,49 ) P87  | [49 ,53 ) P14  | [53 ,63 ) P82  | [63 ,67 ) P76  | [67 ,78 ) P13  | [78 ,89 ) P58  | [89 ,99 ) P68  
+
+FCFS Averages:
+  Response:  27.83
+  Waiting :  27.83
+  Turnaround:36.08
+
+SJF (Non-preemptive) Scheduling =>
+Gantt — SJF:
+[0  ,15 ) P84  | [15 ,17 ) P67  | [17 ,23 ) P88  | [23 ,27 ) P14  | [27 ,31 ) P76  | [31 ,38 ) P54  | [38 ,47 ) P35  | [47 ,57 ) P87  | [57 ,67 ) P82  | [67 ,77 ) P68  | [77 ,88 ) P13  | [88 ,99 ) P58  
+
+SJF Averages:
+  Response:  24.00
+  Waiting :  24.00
+  Turnaround:32.25
+
+SRTF (Preemptive SJF) Scheduling =>
+Gantt — SRTF:
+[0  ,15 ) P84  | [15 ,17 ) P67  | [17 ,23 ) P88  | [23 ,27 ) P14  | [27 ,31 ) P76  | [31 ,38 ) P54  | [38 ,47 ) P35  | [47 ,57 ) P87  | [57 ,67 ) P82  | [67 ,77 ) P68  | [77 ,88 ) P13  | [88 ,99 ) P58  
+
+SRTF Averages:
+  Response:  24.00
+  Waiting :  24.00
+  Turnaround:32.25
+
+Round Robin Scheduling (q=2) =>
+Gantt — RoundRobin(q=2):
+[0  ,12 ) P84  | [12 ,14 ) P54  | [14 ,16 ) P88  | [16 ,18 ) P84  | [18 ,20 ) P67  | [20 ,22 ) P35  | [22 ,24 ) P54  | [24 ,26 ) P88  | [26 ,28 ) P87  | [28 ,29 ) P84  | [29 ,31 ) P14  | [31 ,33 ) P82  | [33 ,35 ) P76  | [35 ,37 ) P13  | [37 ,39 ) P35  | [39 ,41 ) P58  | [41 ,43 ) P54  | [43 ,45 ) P88  | [45 ,47 ) P68  | [47 ,49 ) P87  | [49 ,51 ) P14  | [51 ,53 ) P82  | [53 ,55 ) P76  | [55 ,57 ) P13  | [57 ,59 ) P35  | [59 ,61 ) P58  | [61 ,62 ) P54  | [62 ,64 ) P68  | [64 ,66 ) P87  | [66 ,68 ) P82  | [68 ,70 ) P13  | [70 ,72 ) P35  | [72 ,74 ) P58  | [74 ,76 ) P68  | [76 ,78 ) P87  | [78 ,80 ) P82  | [80 ,82 ) P13  | [82 ,83 ) P35  | [83 ,85 ) P58  | [85 ,87 ) P68  | [87 ,89 ) P87  | [89 ,91 ) P82  | [91 ,93 ) P13  | [93 ,95 ) P58  | [95 ,97 ) P68  | [97 ,98 ) P13  | [98 ,99 ) P58  
+
+RoundRobin(q=2) Averages:
+  Response:  8.58
+  Waiting :  43.42
+  Turnaround:51.67
+
+CSV written: out.csv

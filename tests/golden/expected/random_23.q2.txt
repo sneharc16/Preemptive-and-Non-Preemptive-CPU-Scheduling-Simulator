@@ -1,0 +1,39 @@
+Number of Processes: Enter details for each process on its own line: PID Arrival Burst
+
+FCFS (FIFO) Scheduling =>
+Gantt — FCFS:
+[0  ,4  ) IDLE  | [4  ,13 ) P70  | [13 ,26 ) P71  | [26 ,31 ) P39  | [31 ,45 ) P65  | [45 ,51 ) P92  | [51 ,58 ) P88  | [58 ,61 ) P12  | [61 ,69 ) P56  | [69 ,76 ) P7   | [76 ,84 ) P66  | [84 ,95 ) P4   
+
+FCFS Averages:
+  Response:  29.82
+  Waiting :  29.82
+  Turnaround:38.09
+
+SJF (Non-preemptive) Scheduling =>
+Gantt — SJF:
+[4  ,13 ) P70  | [13 ,18 ) P39  | [18 ,24 ) P92  | [24 ,27 ) P12  | [27 ,34 ) P88  | [34 ,41 ) P7   | [41 ,49 ) P56  | [49 ,57 ) P66  | [57 ,68 ) P4   | [68 ,81 ) P71  | [81 ,95 ) P65  
+
+SJF Averages:
+  Response:  20.55
+  Waiting :  20.55
+  Turnaround:28.82
+
+SRTF (Preemptive SJF) Scheduling =>
+Gantt — SRTF:
+[4  ,13 ) P70  | [13 ,18 ) P39  | [18 ,24 ) P92  | [24 ,27 ) P12  | [27 ,34 ) P88  | [34 ,41 ) P7   | [41 ,49 ) P56  | [49 ,57 ) P66  | [57 ,68 ) P4   | [68 ,81 ) P71  | [81 ,95 ) P65  
+
+SRTF Averages:
+  Response:  20.55
+  Waiting :  20.55
+  Turnaround:28.82
+
+Round Robin Scheduling (q=2) =>
+Gantt — RoundRobin(q=2):
+[4  ,6  ) P70  | [6  ,8  ) P71  | [8  ,10 ) P70  | [10 ,12 ) P71  | [12 ,14 ) P39  | [14 ,16 ) P70  | [16 ,18 ) P65  | [18 ,20 ) P71  | [20 ,22 ) P39  | [22 ,24 ) P92  | [24 ,26 ) P70  | [26 ,28 ) P65  | [28 ,30 ) P88  | [30 ,32 ) P71  | [32 ,34 ) P12  | [34 ,35 ) P39  | [35 ,37 ) P56  | [37 ,39 ) P92  | [39 ,41 ) P7   | [41 ,43 ) P66  | [43 ,44 ) P70  | [44 ,46 ) P65  | [46 ,48 ) P4   | [48 ,50 ) P88  | [50 ,52 ) P71  | [52 ,53 ) P12  | [53 ,55 ) P56  | [55 ,57 ) P92  | [57 ,59 ) P7   | [59 ,61 ) P66  | [61 ,63 ) P65  | [63 ,65 ) P4   | [65 ,67 ) P88  | [67 ,69 ) P71  | [69 ,71 ) P56  | [71 ,73 ) P7   | [73 ,75 ) P66  | [75 ,77 ) P65  | [77 ,79 ) P4   | [79 ,80 ) P88  | [80 ,81 ) P71  | [81 ,83 ) P56  | [83 ,84 ) P7   | [84 ,86 ) P66  | [86 ,88 ) P65  | [88 ,90 ) P4   | [90 ,92 ) P65  | [92 ,95 ) P4   
+
+RoundRobin(q=2) Averages:
+  Response:  8.27
+  Waiting :  46.27
+  Turnaround:54.55
+
+CSV written: out.csv
