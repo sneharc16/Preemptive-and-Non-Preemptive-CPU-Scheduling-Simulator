@@ -12,7 +12,7 @@ else
 GCOV ?= gcov
 endif
 
-.PHONY: all test asan coverage experiments wasm wasm-test format format-check clean
+.PHONY: all test asan coverage experiments perf-compare wasm wasm-test format format-check clean
 
 all:
 	$(CMAKE) -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -40,6 +40,11 @@ coverage:
 # Needs Python 3 with matplotlib.
 experiments: all
 	SCHED_BIN=$(CURDIR)/build/sched python3 experiments/run_all.py
+
+# Times the priority/HRRN data-structure change against the commit before it
+# (builds that commit in a temporary git worktree).
+perf-compare: all
+	SCHED_BIN=$(CURDIR)/build/sched python3 experiments/perf_compare.py
 
 # Browser build (needs Emscripten's emcc on PATH): the CLI compiled to
 # WebAssembly plus the static page, in build-wasm/site/.

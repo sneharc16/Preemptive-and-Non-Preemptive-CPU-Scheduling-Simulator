@@ -27,7 +27,8 @@ jobs:
         with:
           node-version: "22"
       - name: Build WebAssembly and compare with the native binary
-        run: make wasm-test
+        # emsdk puts a directory named "cmake" on PATH; use the real binaries
+        run: make wasm-test CMAKE="$(type -P cmake)" CTEST="$(type -P ctest)"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build-wasm/site
