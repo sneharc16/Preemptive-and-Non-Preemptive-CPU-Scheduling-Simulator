@@ -9,7 +9,15 @@
     X(POLICY_FCFS)                                                                                 \
     X(POLICY_SJF)                                                                                  \
     X(POLICY_SRTF)                                                                                 \
-    X(POLICY_RR)
+    X(POLICY_RR)                                                                                   \
+    X(POLICY_PRIO)                                                                                 \
+    X(POLICY_PRIO_P)                                                                               \
+    X(POLICY_HRRN)                                                                                 \
+    X(POLICY_MLFQ)                                                                                 \
+    X(POLICY_LOTTERY)                                                                              \
+    X(POLICY_STRIDE)                                                                               \
+    X(POLICY_CFS)                                                                                  \
+    X(POLICY_OPT_NP)
 
 #define DECLARE(p) extern const Policy p;
 SCHED_POLICIES(DECLARE)
