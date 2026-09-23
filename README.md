@@ -1,272 +1,218 @@
 # Preemptive and Non-Preemptive CPU Scheduling Simulator
 
-A comprehensive implementation of four fundamental CPU scheduling algorithms in C programming language.
+[![CI](https://github.com/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/branch/main/graph/badge.svg)](https://codecov.io/gh/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+A simulator for four fundamental CPU scheduling algorithms, written in C11.
 
 ## Overview
 
-This project implements and compares four different CPU scheduling algorithms:
+This project implements and compares four CPU scheduling algorithms:
 
-- **FIFO (First In First Out)** - Non-preemptive
-- **SJF (Shortest Job First)** - Non-preemptive  
+- **FCFS (First Come First Served, FIFO)** - Non-preemptive
+- **SJF (Shortest Job First)** - Non-preemptive
 - **SRTF (Shortest Remaining Time First)** - Preemptive
-- **Round Robin (RR)** - Preemptive with time quantum
+- **Round Robin (RR)** - Preemptive with a time quantum
 
 ## Features
 
-- Complete implementation of all four major scheduling algorithms
-- Performance metrics calculation (average response time and turnaround time)
-- Comprehensive input validation and error checking
-- Detailed execution output with timing statistics
-- Extensive code documentation and comments
+- One event-driven simulation engine with a pluggable policy interface
+- Per-process metrics (start, completion, response, waiting, turnaround) and averages
+- Gantt charts (text) and an optional per-tick timeline
+- Output as text, CSV or JSON (`docs/json-schema.md`)
+- Input from stdin (interactive) or a CSV file
+- Input validation with clear error messages and exit codes
+- 64-bit time values with overflow checks
 
-## Tech Stack
+## Build
 
-- **Language**: C
-- **Compiler**: GCC (or any C99 compatible compiler)
-- **Platform**: Cross-platform (Linux, macOS, Windows)
-
-## Installation and Setup
-
-### Prerequisites
-- C compiler (GCC recommended)
-- Standard C library
-
-### Compilation
+Prerequisites: a C11 compiler (GCC or Clang), CMake >= 3.16, and Python 3
+with `pytest` for the tests.
 
 ```bash
-# Basic compilation
-gcc -o cpu_scheduling cpu_scheduling.c
+make            # builds ./sched (CMake Release build under build/)
+make test       # runs all tests
+make asan       # runs all tests under AddressSanitizer + UndefinedBehaviorSanitizer
+make coverage   # line coverage report (requires gcovr)
+```
 
-# With additional warnings (recommended)
-gcc -Wall -Wextra -o cpu_scheduling cpu_scheduling.c
+Without make:
 
-# For debugging
-gcc -g -Wall -o cpu_scheduling cpu_scheduling.c
+```bash
+cmake -S . -B build && cmake --build build
+./build/sched --help
 ```
 
 ## Usage
 
-### Running the Program
+```
+sched [--algo=all|fcfs,sjf,srtf,rr] [--quantum=Q] [--input=FILE]
+      [--format=text|csv|json] [--csv=FILE|--no-csv] [--no-gantt] [--per-tick]
+```
+
+| Option | Meaning |
+|--------|---------|
+| `--algo=LIST` | Comma-separated algorithms to run, or `all` (default) |
+| `--quantum=Q` | Round Robin time quantum, integer > 0 (default 2) |
+| `--input=FILE` | Read processes from a CSV file instead of stdin |
+| `--format=FMT` | Output format on stdout: `text` (default), `csv`, `json` |
+| `--csv=FILE` | Also write per-process metrics to FILE |
+| `--no-csv` | Do not write a CSV file (text mode writes `schedule_metrics.csv` by default) |
+| `--no-gantt` | Omit Gantt charts from text output |
+| `--per-tick` | Add a per-tick timeline to text output |
+
+### Input
+
+**CSV file** (`--input=FILE`): a header row naming the columns `pid`,
+`arrival`, `burst` (any order), then one process per line. Blank lines and
+lines starting with `#` are ignored.
+
+```csv
+pid,arrival,burst
+1,0,5
+2,1,3
+3,2,8
+4,3,6
+5,4,4
+```
+
+**Interactive (stdin)**: the number of processes, then one `PID Arrival Burst`
+line per process. The time quantum is given with `--quantum`, not on stdin.
+
+```
+5
+1 0 5
+2 1 3
+3 2 8
+4 3 6
+5 4 4
+```
+
+Constraints: at least one process; PID >= 0 and unique; arrival >= 0;
+burst > 0; quantum > 0.
+
+### Example
 
 ```bash
-./cpu_scheduling
+./sched --input=examples/basic.csv --no-csv --no-gantt
 ```
 
-### Input Requirements
+```
+FCFS (FIFO) Scheduling =>
+FCFS Averages:
+  Response:  8.20
+  Waiting :  8.20
+  Turnaround:13.40
 
-The program requires the following inputs:
+SJF (Non-preemptive) Scheduling =>
+SJF Averages:
+  Response:  6.60
+  Waiting :  6.60
+  Turnaround:11.80
 
-1. **Number of Processes**: Must be greater than 4
-2. **Process Details**: For each process, provide:
-   - Process ID (PID) - Non-negative integer
-   - Arrival Time - Non-negative integer
-   - Burst Time - Positive integer
-3. **Time Quantum**: Positive integer for Round Robin scheduling
+SRTF (Preemptive SJF) Scheduling =>
+SRTF Averages:
+  Response:  5.80
+  Waiting :  6.40
+  Turnaround:11.60
 
-### Example Usage
+Round Robin Scheduling (q=2) =>
+RoundRobin(q=2) Averages:
+  Response:  2.80
+  Waiting :  12.60
+  Turnaround:17.80
+```
+
+With Gantt chart (`./sched --input=examples/basic.csv --no-csv --algo=srtf`):
 
 ```
-Number of Processes: 5
-Enter details for each process (PID, Arrival, Burst):
-Process 1: 1 0 5
-Process 2: 2 1 3
-Process 3: 3 2 8
-Process 4: 4 3 6
-Process 5: 5 4 4
-Enter Time Quantum: 2
-```
-
-### Sample Output
-
-```
-FIFO Scheduling Algorithm =>
-Execution order: 1 2 3 4 5
-Average Response Time: 6.00
-Average Turnaround Time: 11.20
-
-SJF Scheduling Algorithm =>
-Execution order: 1 2 5 4 3
-Average Response Time: 4.40
-Average Turnaround Time: 9.60
-
-SRTF Scheduling Algorithm =>
-Execution order: 1 2 2 5 5 4 4 4 4 4 3 3 3 3 3 3 3 3
-Average Response Time: 2.20
-Average Turnaround Time: 9.00
-
-Round Robin Scheduling Algorithm =>
-Execution sequence: 1 2 1 3 2 5 1 4 3 5 4 3 4 3 4 3 3
-Average Response Time: 2.20
-Average Turnaround Time: 9.00
+Gantt — SRTF:
+[0  ,1  ) P1   | [1  ,4  ) P2   | [4  ,8  ) P1   | [8  ,12 ) P5   | [12 ,18 ) P4   | [18 ,26 ) P3
 ```
 
 ## Algorithm Specifications
 
-### First In First Out (FIFO)
+Ties are broken deterministically as listed.
+
+### First Come First Served (FCFS / FIFO)
 - **Type**: Non-preemptive
-- **Logic**: Executes processes in order of arrival time
-- **Advantages**: Simple implementation, fair for processes with similar burst times
-- **Disadvantages**: Poor average waiting time, convoy effect with long processes
+- **Logic**: Runs processes in order of arrival; ties by PID
+- **Advantages**: Simple, no starvation
+- **Disadvantages**: Convoy effect: short jobs wait behind long ones
 
 ### Shortest Job First (SJF)
 - **Type**: Non-preemptive
-- **Logic**: Selects process with shortest burst time among arrived processes
-- **Advantages**: Optimal average waiting time for non-preemptive algorithms
-- **Disadvantages**: Potential starvation of long processes, requires burst time prediction
+- **Logic**: Picks the arrived process with the shortest burst; ties by arrival, then PID
+- **Advantages**: Minimises average waiting/turnaround time when all processes arrive at the same time
+- **Disadvantages**: Not optimal when processes arrive at different times; long jobs can starve; needs burst lengths in advance
 
 ### Shortest Remaining Time First (SRTF)
 - **Type**: Preemptive
-- **Logic**: Always executes process with shortest remaining execution time
-- **Advantages**: Optimal average waiting time among all algorithms
-- **Disadvantages**: High context switching overhead, potential starvation
+- **Logic**: Always runs the process with the least remaining time; re-evaluated at each arrival; ties by arrival, then PID
+- **Advantages**: Minimises average waiting/turnaround time over all possible schedules
+- **Disadvantages**: More context switches, long jobs can starve, needs burst lengths in advance
 
 ### Round Robin
 - **Type**: Preemptive
-- **Logic**: Each process receives equal time quantum in circular order
-- **Advantages**: Fair scheduling, good response time, prevents starvation
-- **Disadvantages**: Performance heavily dependent on time quantum selection
+- **Logic**: FIFO queue; each process runs for at most one quantum, then rejoins the back of the queue. Processes that arrive during or exactly at the end of a slice are queued before the preempted process.
+- **Advantages**: Fair, good response time, no starvation
+- **Disadvantages**: Performance depends heavily on the quantum
 
 ## Performance Metrics
 
-The implementation calculates two key performance indicators:
-
-- **Response Time**: Time interval from process arrival to first CPU execution
-- **Turnaround Time**: Time interval from process arrival to completion
-
-## Input Validation
-
-The program validates all inputs according to these constraints:
-
-- Number of processes must exceed 4
-- Process IDs and arrival times must be non-negative
-- Burst times must be positive integers
-- Time quantum must be a positive integer
-
-## Code Architecture
-
-```
-cpu_scheduling.c
-├── Utility Functions
-│   ├── min_index_fifo()              # Finds process with earliest arrival
-│   ├── min_index_sjf()               # Finds process with shortest burst time
-│   ├── calculate_times_non_preemptive()  # Metrics for FIFO and SJF
-│   └── calculate_times_preemptive()      # Metrics for SRTF and Round Robin
-├── Scheduling Algorithms
-│   ├── FIFO()                        # First In First Out implementation
-│   ├── SJF()                         # Shortest Job First implementation
-│   ├── SRTF()                        # Shortest Remaining Time First implementation
-│   └── RoundRobin()                  # Round Robin implementation
-└── main()                            # Input handling and program execution
-```
+- **Response time**: first time on the CPU − arrival
+- **Turnaround time**: completion − arrival
+- **Waiting time**: turnaround − burst
 
 ## Error Handling
 
-| Error Message | Cause | Resolution |
-|---------------|--------|------------|
-| "Processes should be more than 4" | Process count ≤ 4 | Enter a value greater than 4 |
-| "Invalid arguments" | Negative PID/arrival or non-positive burst time | Use valid non-negative values for PID/arrival and positive values for burst time |
-| "Quantum should be more than 0" | Time quantum ≤ 0 | Enter a positive integer for time quantum |
+Invalid input is reported on stderr with a specific message, for example
+`sched: error: duplicate PID 1: every process needs a unique PID` or
+`sched: error: line 3: burst of P2 must be > 0 (got 0)`.
+
+| Exit code | Meaning |
+|-----------|---------|
+| 0 | Success |
+| 1 | Invalid input (bad numbers, duplicate PIDs, empty input, overflow, ...) |
+| 2 | Invalid command-line usage (unknown option, bad quantum, unknown algorithm) |
+| 3 | A file could not be read or written |
+| 4 | Out of memory |
 
 ## Testing
 
-### Test Case 1: Standard Scenario
+`make test` runs:
+
+- C unit tests for every module
+- Golden tests: output must match the original implementation's saved output
+- Hand-computed textbook cases with expected Gantt charts
+- Differential testing against an independent tick-by-tick reference simulator
+  (`tools/reference_sim.py`) on 5,000 random workloads, with invariant checks on every schedule
+- Optimality checks: SJF against brute force when all processes arrive at t=0,
+  and SRTF against an exhaustive search over all preemptive schedules
+- Command-line and error-handling tests
+
+## Project Structure
+
 ```
-Number of Processes: 5
-Process 1: 1 0 5
-Process 2: 2 1 3  
-Process 3: 3 2 8
-Process 4: 4 3 6
-Process 5: 5 4 4
-Time Quantum: 2
-```
-
-### Test Case 2: Simultaneous Arrivals
-```
-Number of Processes: 5
-Process 1: 1 0 4
-Process 2: 2 0 2
-Process 3: 3 0 6
-Process 4: 4 0 3
-Process 5: 5 0 1
-Time Quantum: 1
-```
-
-## Build Configuration Options
-
-```bash
-# Optimized release build
-gcc -O2 -o cpu_scheduling cpu_scheduling.c
-
-# Debug build with symbols
-gcc -g -DDEBUG -o cpu_scheduling cpu_scheduling.c
-
-# Strict compilation with all warnings
-gcc -Wall -Wextra -Wpedantic -std=c99 -o cpu_scheduling cpu_scheduling.c
+include/sched/   public headers
+src/engine/      simulation engine and workload validation
+src/policies/    one file per scheduling policy + registry
+src/io/          input parsers and text/CSV/JSON output
+src/metrics/     metric calculations
+src/cli/         command-line front end
+tests/           unit, golden, differential, optimality and CLI tests
+tools/           reference simulator and golden-file generator
+examples/        sample workloads
 ```
 
-## Educational Applications
+## Limitations
 
-This implementation serves multiple educational purposes:
-
-- Operating Systems course assignments and projects
-- Practical demonstration of CPU scheduling concepts
-- Comparative analysis of algorithm performance characteristics
-- C programming language learning and practice
-
-## Development Guidelines
-
-For contributors and developers:
-
-1. Maintain consistent code formatting and style
-2. Add comprehensive comments for new functions
-3. Include input validation for all user inputs
-4. Test with various process configurations
-5. Document any algorithmic modifications
-
-## Technical Requirements
-
-- C compiler supporting C99 standard or later
-- Minimum 1KB stack space for local variables
-- Standard input/output capabilities
-- Integer arithmetic support
-
-## Limitations and Considerations
-
-- Maximum process limit determined by system memory
-- Time calculations use integer arithmetic (millisecond precision)
-- Round Robin queue implementation uses fixed-size array
-- No persistent storage of scheduling results
-
-## Future Development
-
-Potential enhancements for extended functionality:
-
-- Priority-based scheduling algorithms
-- Multilevel queue and multilevel feedback queue scheduling
-- Graphical Gantt chart generation
-- File-based input/output operations
-- Statistical analysis and comparison tools
+- Single CPU; no context-switch cost or I/O modelling
+- Burst lengths are assumed to be known exactly (SJF/SRTF)
+- Time is measured in integer ticks
+- The full Gantt chart is kept in memory and limited to 16,777,216 segments
 
 ## License
 
-This project is released under the MIT License.
-
-## Support and Documentation
-
-For technical support or questions:
-
-1. Review the error handling section for common issues
-2. Verify input format matches specified requirements
-3. Ensure proper compilation with recommended flags
-4. Consult example inputs and expected outputs
-
-## Version History
-
-- v1.0: Initial implementation with basic scheduling algorithms
-- v1.1: Enhanced input validation and error handling
-- v1.2: Improved Round Robin implementation with proper queue management
-- v1.3: Corrected time calculation methods for accurate metrics
-
----
-
-This implementation provides a solid foundation for understanding CPU scheduling algorithms and their comparative performance characteristics in operating system environments.
+Released under the MIT License. See [LICENSE](LICENSE).
