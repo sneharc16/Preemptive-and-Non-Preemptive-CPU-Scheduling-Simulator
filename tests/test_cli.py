@@ -189,6 +189,14 @@ def test_new_policies_run_from_the_cli(sched_bin):
     assert {res["cores"] for res in doc["results"]} == {2}
 
 
+def test_format_none_and_timing(sched_bin):
+    r, files = run(sched_bin, ["--format=none", "--timing", "--algo=fcfs,rr"], stdin_text(BASIC))
+    assert r.returncode == 0 and r.stdout == "" and files == []
+    lines = r.stderr.splitlines()
+    assert [line.split()[:2] for line in lines] == [["timing", "fcfs"], ["timing", "rr"]]
+    assert all(float(line.split()[2]) >= 0 for line in lines)
+
+
 def test_gap_text_output(sched_bin):
     r, _ = run(sched_bin, ["--algo=sjf", "--gap", "--no-csv", "--no-gantt"],
                stdin_text([(2, 5, 9), (1, 6, 2)]))
@@ -244,7 +252,7 @@ USAGE_ERRORS = [
     (["--quantum=abc"], "--quantum must be an integer > 0 (got 'abc')"),
     (["--quantum="], "--quantum must be an integer > 0 (got '')"),
     (["--quantum=2.5"], "--quantum must be an integer > 0"),
-    (["--format=xml"], "--format must be text, csv or json (got 'xml')"),
+    (["--format=xml"], "--format must be text, csv, json or none (got 'xml')"),
     (["--input="], "--input needs a file name"),
     (["--csv="], "--csv needs a file name"),
     (["--summary-csv="], "--summary-csv needs a file name"),
