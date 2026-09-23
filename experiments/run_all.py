@@ -50,7 +50,10 @@ def write_readme(takeaways, bench_notes):
                       f"**Takeaway:** {bench_notes[stem]}", "",
                       f"Data: [{stem}.csv]({stem}.csv), fitted slopes: "
                       f"[bench_exponents.csv](bench_exponents.csv)", ""]
-        lines += ["Profiling notes: [perf/profile_prio_p.md](perf/profile_prio_p.md).", ""]
+        lines += ["Profiling: [perf/profile_prio_p.md](perf/profile_prio_p.md) (macOS `sample`) and "
+                  "[perf/before_after.md](perf/before_after.md) (`make perf-compare`, times the "
+                  "priority/HRRN change against the commit before it). Fuzzing record: "
+                  "[fuzz.md](fuzz.md).", ""]
     lines += ["## Experiments", ""]
     for stem, title, _ in experiments.ALL:
         if stem not in takeaways:
