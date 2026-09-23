@@ -46,11 +46,19 @@ def test_algo_subset_uses_canonical_order(sched_bin):
                                   "Round Robin Scheduling (q=3) =>"]
 
 
-def test_algo_all_and_duplicates(sched_bin):
-    r1, _ = run(sched_bin, ["--algo=all", "--format=csv"], stdin_text(BASIC))
-    r2, _ = run(sched_bin, ["--algo=srtf,fcfs,rr,sjf,fcfs", "--format=csv"], stdin_text(BASIC))
-    assert r1.returncode == r2.returncode == 0
-    assert r1.stdout == r2.stdout
+def test_algo_classic_all_and_duplicates(sched_bin):
+    default, _ = run(sched_bin, ["--format=csv"], stdin_text(BASIC))
+    classic, _ = run(sched_bin, ["--algo=classic", "--format=csv"], stdin_text(BASIC))
+    listed, _ = run(sched_bin, ["--algo=srtf,fcfs,rr,sjf,fcfs", "--format=csv"], stdin_text(BASIC))
+    assert default.returncode == classic.returncode == listed.returncode == 0
+    assert default.stdout == classic.stdout == listed.stdout
+    every, _ = run(sched_bin, ["--algo=all", "--format=json"], stdin_text(BASIC))
+    names = [res["algorithm"] for res in json.loads(every.stdout)["results"]]
+    assert names == ["fcfs", "sjf", "srtf", "rr", "prio", "prio-p", "hrrn", "mlfq", "lottery",
+                     "stride", "cfs"]  # opt-np is offline and only runs when named
+    mixed, _ = run(sched_bin, ["--algo=classic,opt-np", "--format=json"], stdin_text(BASIC))
+    names = [res["algorithm"] for res in json.loads(mixed.stdout)["results"]]
+    assert names == ["fcfs", "sjf", "srtf", "rr", "opt-np"]
 
 
 def test_file_input_matches_stdin_input(sched_bin):
@@ -84,16 +92,23 @@ def test_format_json_schema(sched_bin):
     r, files = run(sched_bin, ["--format=json", "--algo=rr", "--quantum=3"], stdin_text(BASIC))
     doc = json.loads(r.stdout)
     assert doc["schema_version"] == 1
-    assert doc["workload"] == [{"pid": p, "arrival": a, "burst": b} for p, a, b in BASIC]
+    assert doc["workload"] == [{"pid": p, "arrival": a, "burst": b, "priority": 0, "tickets": 100,
+                                "nice": 0, "bursts": [b]} for p, a, b in BASIC]
+    assert doc["options"] == {"cores": 1, "cs_cost": 0, "predict": "oracle"}
     (res,) = doc["results"]
     assert set(res) == {"algorithm", "label", "preemptive", "quantum", "processes", "averages",
-                        "makespan", "gantt"}
+                        "summary", "makespan", "cores", "gantt"}
     assert (res["algorithm"], res["label"], res["preemptive"], res["quantum"]) == (
         "rr", "RoundRobin(q=3)", True, 3)
-    assert set(res["processes"][0]) == {"pid", "arrival", "burst", "start", "completion",
-                                        "response", "waiting", "turnaround"}
+    assert set(res["processes"][0]) == {"pid", "arrival", "burst", "io", "start", "completion",
+                                        "response", "waiting", "turnaround", "slowdown"}
     assert set(res["averages"]) == {"response", "waiting", "turnaround"}
-    assert all(set(s) == {"start", "end", "pid"} for s in res["gantt"])
+    assert set(res["summary"]) == {"turnaround", "waiting", "response", "slowdown_mean",
+                                   "slowdown_max", "jain_fairness_slowdown", "span", "throughput",
+                                   "cpu_utilization", "context_switches", "switch_time",
+                                   "switch_fraction"}
+    assert set(res["summary"]["turnaround"]) == {"mean", "median", "p95", "p99", "max"}
+    assert all(set(s) == {"start", "end", "pid", "type", "core"} for s in res["gantt"])
     assert files == []
 
 
@@ -127,7 +142,8 @@ def test_help(sched_bin):
         r, _ = run(sched_bin, [flag])
         assert r.returncode == 0
         assert r.stdout.startswith("Usage: ")
-        assert "Available: fcfs sjf srtf rr" in r.stdout
+        assert ("Available: fcfs sjf srtf rr prio prio-p hrrn mlfq lottery stride cfs opt-np"
+                in r.stdout)
 
 
 def test_large_bursts_no_overflow(sched_bin):
@@ -139,6 +155,70 @@ def test_large_bursts_no_overflow(sched_bin):
     doc = json.loads(r.stdout)
     for res in doc["results"]:
         assert res["makespan"] == 4000000000
+
+
+def test_metrics_full_and_summary_csv(sched_bin):
+    with tempfile.TemporaryDirectory() as tmp:
+        r = subprocess.run([sched_bin, "--metrics=full", "--no-csv", "--summary-csv=s.csv",
+                            f"--input={BASIC_CSV}", "--algo=fcfs,rr"],
+                           capture_output=True, text=True, cwd=tmp)
+        assert r.returncode == 0, r.stderr
+        assert "FCFS Metrics:\n  Turnaround: mean 13.40  median 14.00  p95 22  p99 22  max 22\n" in r.stdout
+        with open(os.path.join(tmp, "s.csv")) as f:
+            rows = list(csv.DictReader(f))
+    assert [row["Algorithm"] for row in rows] == ["FCFS", "RoundRobin(q=2)"]
+    assert rows[0]["TurnaroundMean"] == "13.400000" and rows[0]["TurnaroundMax"] == "22"
+    r, _ = run(sched_bin, ["--format=csv", "--metrics=full", "--algo=sjf"], stdin_text(BASIC))
+    lines = r.stdout.splitlines()
+    assert lines[0].endswith(",IO,Slowdown") and lines[1] == "SJF,1,0,5,0,5,0,0,5,0,1.000000"
+
+
+def test_new_policies_run_from_the_cli(sched_bin):
+    r, _ = run(sched_bin, ["--algo=all", "--format=json", "--quantum=3", "--aging=2",
+                           "--mlfq-levels=2", "--mlfq-quanta=2,6", "--mlfq-boost=20",
+                           "--seed=7", "--cfs-latency=12", "--cfs-min-gran=2", "--cores=2",
+                           "--cs-cost=1", "--predict=ewma", "--alpha=0.25", "--tau0=3.5"],
+               stdin_text(BASIC))
+    assert r.returncode == 0, r.stderr
+    doc = json.loads(r.stdout)
+    assert doc["options"] == {"cores": 2, "cs_cost": 1, "predict": "ewma", "alpha": 0.25,
+                              "tau0": 3.5}
+    assert doc["prediction"]["bursts"] == 5
+    regret = {res["algorithm"] for res in doc["results"] if "prediction_regret_pct" in res}
+    assert regret == {"sjf", "srtf", "hrrn"}
+    assert {res["cores"] for res in doc["results"]} == {2}
+
+
+def test_gap_text_output(sched_bin):
+    r, _ = run(sched_bin, ["--algo=sjf", "--gap", "--no-csv", "--no-gantt"],
+               stdin_text([(2, 5, 9), (1, 6, 2)]))
+    assert r.returncode == 0, r.stderr
+    assert "SJF optimality gap: 35.71% above the opt-np mean turnaround" in r.stdout
+    assert "opt-np optimum mean turnaround: 7.00" in r.stdout
+
+
+def test_ewma_text_output(sched_bin):
+    r, _ = run(sched_bin, ["--algo=sjf", "--predict=ewma", "--no-csv", "--no-gantt"],
+               stdin_text([(1, 0, 8), (2, 0, 2)]))
+    assert r.returncode == 0, r.stderr
+    # tau0 = 5 for both bursts: |5-8| and |5-2| -> MAE 3, MAPE (37.5% + 150%) / 2
+    assert "EWMA burst prediction: MAE 3.0000 ticks, MAPE 93.75% over 2 CPU bursts" in r.stdout
+    # EWMA runs P1 first (tie at 5, pid order): mean turnaround 9 vs oracle 6
+    assert "SJF prediction regret: 50.00% mean turnaround vs oracle" in r.stdout
+
+
+def test_csv_input_with_bursts_and_optional_columns(sched_bin):
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "w.csv")
+        with open(path, "w") as f:
+            f.write("pid,arrival,bursts,priority,tickets,nice\n1,0,3:2:1,2,10,5\n2,1,4,,,\n")
+        r, _ = run(sched_bin, [f"--input={path}", "--format=json", "--algo=fcfs"])
+    assert r.returncode == 0, r.stderr
+    doc = json.loads(r.stdout)
+    assert doc["workload"][0] == {"pid": 1, "arrival": 0, "burst": 4, "priority": 2, "tickets": 10,
+                                  "nice": 5, "bursts": [3, 2, 1]}
+    p1 = doc["results"][0]["processes"][0]
+    assert (p1["burst"], p1["io"], p1["completion"], p1["waiting"]) == (4, 2, 8, 2)
 
 
 # ---------------- errors ----------------
@@ -157,7 +237,7 @@ USAGE_ERRORS = [
     (["--bogus"], "unknown option '--bogus'"),
     (["--algo"], "unknown option '--algo'"),
     (["--algo="], "unknown algorithm ''"),
-    (["--algo=fcfs,lottery"], "unknown algorithm 'lottery'"),
+    (["--algo=fcfs,fifo"], "unknown algorithm 'fifo'"),
     (["--algo=fcfs,"], "unknown algorithm ''"),
     (["--quantum=0"], "--quantum must be an integer > 0 (got '0')"),
     (["--quantum=-2"], "--quantum must be an integer > 0"),
@@ -167,6 +247,29 @@ USAGE_ERRORS = [
     (["--format=xml"], "--format must be text, csv or json (got 'xml')"),
     (["--input="], "--input needs a file name"),
     (["--csv="], "--csv needs a file name"),
+    (["--summary-csv="], "--summary-csv needs a file name"),
+    (["--cores=0"], "--cores must be in 1..1024"),
+    (["--cores=1025"], "--cores must be in 1..1024"),
+    (["--cs-cost=-1"], "--cs-cost must be an integer >= 0"),
+    (["--predict=psychic"], "--predict must be oracle or ewma"),
+    (["--alpha=1.5"], "--alpha must be a number in [0, 1]"),
+    (["--alpha=nan"], "--alpha must be a number in [0, 1]"),
+    (["--alpha="], "--alpha must be a number in [0, 1]"),
+    (["--tau0=0"], "--tau0 must be a number > 0"),
+    (["--tau0=inf"], "--tau0 must be a number > 0"),
+    (["--aging=-1"], "--aging must be an integer >= 0"),
+    (["--mlfq-levels=0"], "--mlfq-levels must be in 1..16"),
+    (["--mlfq-levels=17"], "--mlfq-levels must be in 1..16"),
+    (["--mlfq-quanta=2,,4"], "--mlfq-quanta must be 1..16 comma-separated integers > 0"),
+    (["--mlfq-quanta=2,0"], "--mlfq-quanta must be"),
+    (["--mlfq-allot=x"], "--mlfq-allot must be"),
+    (["--mlfq-levels=2", "--mlfq-quanta=1,2,3"], "--mlfq-quanta lists 3 values but --mlfq-levels is 2"),
+    (["--mlfq-allot=4,8"], "--mlfq-allot lists 2 values but MLFQ has 3 levels"),
+    (["--mlfq-boost=-5"], "--mlfq-boost must be an integer >= 0"),
+    (["--seed=-1"], "--seed must be an integer >= 0"),
+    (["--cfs-latency=0"], "--cfs-latency must be an integer > 0"),
+    (["--cfs-min-gran=0"], "--cfs-min-gran must be an integer > 0"),
+    (["--metrics=some"], "--metrics must be basic or full"),
 ]
 
 

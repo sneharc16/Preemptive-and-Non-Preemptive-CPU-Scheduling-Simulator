@@ -11,15 +11,15 @@ typedef struct {
     Queue ready;
 } Fcfs;
 
-static void *fcfs_create(const SchedView *view, const PolicyParams *params) {
+static void *fcfs_create(const SchedView *view, const PolicyParams *params, SchedError *err) {
     (void)params;
     Fcfs *s = malloc(sizeof *s);
-    if (!s) return NULL;
-    s->view = view;
-    if (!queue_init(&s->ready, view->n)) {
+    if (!s || !queue_init(&s->ready, view->n)) {
         free(s);
+        sched_error_set(err, "out of memory");
         return NULL;
     }
+    s->view = view;
     return s;
 }
 
@@ -36,6 +36,7 @@ static bool fcfs_next_slice(void *self, Slice *out) {
     if (queue_empty(&s->ready)) return false;
     out->proc = queue_pop(&s->ready);
     out->length = s->view->remaining[out->proc];
+    out->deadline = SCHED_NO_DEADLINE;
     return true;
 }
 
@@ -44,12 +45,13 @@ const Policy POLICY_FCFS = {
     .label = "FCFS",
     .heading = "FCFS (FIFO) Scheduling",
     .preemptive = false,
-    .preempt_on_arrival = false,
+    .preempt_on_ready = false,
     .uses_quantum = false,
+    .uses_estimates = false,
+    .work_conserving = true,
     .create = fcfs_create,
     .destroy = fcfs_destroy,
     .on_arrival = fcfs_on_arrival,
     .next_slice = fcfs_next_slice,
     .on_preempt = NULL,
-    .on_complete = NULL,
 };

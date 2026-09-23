@@ -15,6 +15,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 add_compile_options(-Wall -Wextra -Wpedantic)
+# No fused multiply-add: floating-point results (EWMA predictions) must be
+# identical on every compiler and match the Python reference simulator.
+add_compile_options(-ffp-contract=off)
 if(SCHED_WERROR)
   add_compile_options(-Werror)
 endif()
@@ -57,7 +60,7 @@ endforeach()
 
 if(SCHED_PYTHON_TESTS)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  foreach(suite golden cases cli differential optimality)
+  foreach(suite golden cases cli differential optimality policies)
     add_test(NAME py_${suite}
       COMMAND ${Python3_EXECUTABLE} -m pytest -q -p no:cacheprovider tests/test_${suite}.py
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

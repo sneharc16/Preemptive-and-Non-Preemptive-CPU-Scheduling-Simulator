@@ -4,16 +4,25 @@
 [![codecov](https://codecov.io/gh/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/branch/main/graph/badge.svg)](https://codecov.io/gh/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A simulator for four fundamental CPU scheduling algorithms, written in C11.
+A CPU scheduling simulator written in C11.
 
 ## Overview
 
-This project implements and compares four CPU scheduling algorithms:
+This project implements and compares CPU scheduling algorithms:
 
 - **FCFS (First Come First Served, FIFO)** - Non-preemptive
 - **SJF (Shortest Job First)** - Non-preemptive
 - **SRTF (Shortest Remaining Time First)** - Preemptive
 - **Round Robin (RR)** - Preemptive with a time quantum
+- **Priority** - non-preemptive and preemptive, with optional aging
+- **HRRN (Highest Response Ratio Next)** - Non-preemptive
+- **MLFQ (Multi-Level Feedback Queue)** - following OSTEP chapter 8
+- **Lottery** and **Stride** - proportional share
+- **CFS-lite** - a simplified model of the Linux Completely Fair Scheduler
+- **opt-np** - the exact optimal non-preemptive schedule (offline baseline)
+
+`--algo=classic` (the default) runs the first four; `--algo=all` runs every
+online policy. The precise model is documented in [docs/model.md](docs/model.md).
 
 ## Features
 
@@ -24,6 +33,11 @@ This project implements and compares four CPU scheduling algorithms:
 - Input from stdin (interactive) or a CSV file
 - Input validation with clear error messages and exit codes
 - 64-bit time values with overflow checks
+- Optional realism: multiple cores, context-switch cost, I/O bursts, and
+  EWMA burst prediction with MAE/MAPE and regret against exact knowledge
+- Extended metrics (`--metrics=full`): median/p95/p99/max, slowdown, Jain's
+  fairness index, throughput, CPU utilisation, context switches
+- `--gap`: each policy's distance from the exact non-preemptive optimum
 
 ## Build
 
@@ -53,8 +67,18 @@ sched [--algo=all|fcfs,sjf,srtf,rr] [--quantum=Q] [--input=FILE]
 
 | Option | Meaning |
 |--------|---------|
-| `--algo=LIST` | Comma-separated algorithms to run, or `all` (default) |
-| `--quantum=Q` | Round Robin time quantum, integer > 0 (default 2) |
+| `--algo=LIST` | Comma-separated algorithms: `fcfs sjf srtf rr prio prio-p hrrn mlfq lottery stride cfs opt-np`, or `classic` (default), or `all` |
+| `--quantum=Q` | Time quantum for rr, lottery and stride, integer > 0 (default 2) |
+| `--aging=K` | Priority aging: effective priority improves by 1 per K ticks waiting |
+| `--mlfq-levels`, `--mlfq-quanta`, `--mlfq-allot`, `--mlfq-boost` | MLFQ configuration |
+| `--seed=N` | Lottery random seed (results are reproducible) |
+| `--cfs-latency`, `--cfs-min-gran` | CFS-lite parameters |
+| `--cores=N` | Number of CPUs sharing one ready queue (default 1) |
+| `--cs-cost=C` | Ticks per context switch between different processes (default 0) |
+| `--predict=oracle\|ewma`, `--alpha`, `--tau0` | Burst knowledge for SJF/SRTF/HRRN |
+| `--metrics=basic\|full` | Extended metrics in text and CSV output |
+| `--gap` | Report the optimality gap against opt-np |
+| `--summary-csv=FILE` | One row of aggregate metrics per algorithm |
 | `--input=FILE` | Read processes from a CSV file instead of stdin |
 | `--format=FMT` | Output format on stdout: `text` (default), `csv`, `json` |
 | `--csv=FILE` | Also write per-process metrics to FILE |
@@ -64,9 +88,12 @@ sched [--algo=all|fcfs,sjf,srtf,rr] [--quantum=Q] [--input=FILE]
 
 ### Input
 
-**CSV file** (`--input=FILE`): a header row naming the columns `pid`,
-`arrival`, `burst` (any order), then one process per line. Blank lines and
-lines starting with `#` are ignored.
+**CSV file** (`--input=FILE`): a header row naming the columns (any order),
+then one process per line. Blank lines and lines starting with `#` are
+ignored. Required: `pid`, `arrival`, and `burst` or `bursts`. `bursts`
+describes alternating CPU and I/O phases, e.g. `5:3:2` (5 ticks of CPU, 3 of
+I/O, 2 of CPU). Optional: `priority` (lower runs first, default 0), `tickets`
+(default 100) and `nice` (-20..19, default 0).
 
 ```csv
 pid,arrival,burst
@@ -133,7 +160,9 @@ Gantt — SRTF:
 
 ## Algorithm Specifications
 
-Ties are broken deterministically as listed.
+Ties are broken deterministically as listed. The newer policies (priority,
+HRRN, MLFQ, lottery, stride, CFS-lite, opt-np) are specified in
+[docs/model.md](docs/model.md).
 
 ### First Come First Served (FCFS / FIFO)
 - **Type**: Non-preemptive
@@ -186,10 +215,13 @@ Invalid input is reported on stderr with a specific message, for example
 - C unit tests for every module
 - Golden tests: output must match the original implementation's saved output
 - Hand-computed textbook cases with expected Gantt charts
-- Differential testing against an independent tick-by-tick reference simulator
-  (`tools/reference_sim.py`) on 5,000 random workloads, with invariant checks on every schedule
+- Differential testing of every policy against an independent tick-by-tick
+  reference simulator (`tools/reference_sim.py`) on 5,000 random workloads with
+  random cores, switch costs, I/O and prediction settings, with invariant
+  checks on every schedule
 - Optimality checks: SJF against brute force when all processes arrive at t=0,
-  and SRTF against an exhaustive search over all preemptive schedules
+  SRTF against an exhaustive search over all preemptive schedules, and opt-np
+  against brute force over all job orders
 - Command-line and error-handling tests
 
 ## Project Structure
@@ -208,8 +240,10 @@ examples/        sample workloads
 
 ## Limitations
 
-- Single CPU; no context-switch cost or I/O modelling
-- Burst lengths are assumed to be known exactly (SJF/SRTF)
+- Multiple cores share one ready queue; per-core queues, load balancing and
+  cache effects are not modelled
+- The I/O device has unlimited capacity
+- CFS-lite is a simplified model of Linux CFS, not a reimplementation
 - Time is measured in integer ticks
 - The full Gantt chart is kept in memory and limited to 16,777,216 segments
 
