@@ -15,6 +15,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 add_compile_options(-Wall -Wextra -Wpedantic)
+# No fused multiply-add: floating-point results (EWMA predictions) must be
+# identical on every compiler and match the Python reference simulator.
+add_compile_options(-ffp-contract=off)
 if(SCHED_WERROR)
   add_compile_options(-Werror)
 endif()
