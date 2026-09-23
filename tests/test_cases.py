@@ -8,6 +8,7 @@ implied by the chart and checked too.
 import pytest
 
 from properties import check_result
+from reference_sim import simple
 from simrun import gantt_tuples, run_json
 
 
@@ -91,7 +92,7 @@ def test_hand_computed(sched_bin, name):
         assert gantt_tuples(got[alg]) == expected, f"{name}/{alg}"
         rows = {r["pid"]: (r["start"], r["completion"]) for r in got[alg]["processes"]}
         assert rows == implied_start_completion(expected), f"{name}/{alg}"
-        check_result(case["procs"], got[alg])
+        check_result([simple(*p) for p in case["procs"]], got[alg])
 
 
 def test_readme_case1_fcfs_metrics(sched_bin):

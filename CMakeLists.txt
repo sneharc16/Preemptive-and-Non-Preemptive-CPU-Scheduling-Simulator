@@ -60,7 +60,7 @@ endforeach()
 
 if(SCHED_PYTHON_TESTS)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  foreach(suite golden cases cli differential optimality)
+  foreach(suite golden cases cli differential optimality policies)
     add_test(NAME py_${suite}
       COMMAND ${Python3_EXECUTABLE} -m pytest -q -p no:cacheprovider tests/test_${suite}.py
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
