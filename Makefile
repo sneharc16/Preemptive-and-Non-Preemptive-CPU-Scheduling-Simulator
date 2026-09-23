@@ -12,7 +12,7 @@ else
 GCOV ?= gcov
 endif
 
-.PHONY: all test asan coverage format format-check clean
+.PHONY: all test asan coverage experiments format format-check clean
 
 all:
 	$(CMAKE) -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -35,6 +35,11 @@ coverage:
 	gcovr --root . --filter 'src/' --gcov-executable "$(GCOV)" --print-summary \
 	      --xml build-cov/coverage.xml --html-details build-cov/coverage.html \
 	      --fail-under-line 90 build-cov
+
+# Regenerates docs/results/ (plots, CSV tables, takeaways, benchmarks).
+# Needs Python 3 with matplotlib.
+experiments: all
+	SCHED_BIN=$(CURDIR)/build/sched python3 experiments/run_all.py
 
 format:
 	clang-format -i $$(git ls-files '*.c' '*.h')

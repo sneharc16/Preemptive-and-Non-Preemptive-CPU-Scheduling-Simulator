@@ -1,0 +1,12 @@
+policy,exponent_90pct_load,exponent_overload
+fcfs,1.020,1.016
+sjf,1.016,1.126
+srtf,1.013,1.116
+rr,1.012,1.042
+prio,1.023,1.115
+prio-p,1.026,1.121
+hrrn,1.016,1.131
+mlfq,1.015,1.035
+lottery,1.065,1.255
+stride,1.013,1.194
+cfs,1.015,1.235
