@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "sched/core.h"
+
 static int check_failures;
 static int check_total;
 static int check_tests;
@@ -88,6 +90,21 @@ static inline char *stream_contents(FILE *f) {
     if (!buf || fread(buf, 1, (size_t)size, f) != (size_t)size) exit(EXIT_FAILURE);
     buf[size] = '\0';
     return buf;
+}
+
+/* (pid, arrival, burst) with every optional field at its default. */
+typedef struct {
+    int64_t pid, arrival, burst;
+} Triple;
+
+static inline Workload workload_of(const Triple *t, size_t n) {
+    Workload w;
+    workload_init(&w);
+    for (size_t i = 0; i < n; i++) {
+        if (workload_push(&w, process_make(t[i].pid, t[i].arrival, t[i].burst), NULL) != SCHED_OK)
+            exit(EXIT_FAILURE);
+    }
+    return w;
 }
 
 #endif

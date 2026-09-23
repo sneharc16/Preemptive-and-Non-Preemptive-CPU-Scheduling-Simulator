@@ -84,16 +84,23 @@ def test_format_json_schema(sched_bin):
     r, files = run(sched_bin, ["--format=json", "--algo=rr", "--quantum=3"], stdin_text(BASIC))
     doc = json.loads(r.stdout)
     assert doc["schema_version"] == 1
-    assert doc["workload"] == [{"pid": p, "arrival": a, "burst": b} for p, a, b in BASIC]
+    assert doc["workload"] == [{"pid": p, "arrival": a, "burst": b, "priority": 0, "tickets": 100,
+                                "nice": 0, "bursts": [b]} for p, a, b in BASIC]
+    assert doc["options"] == {"cores": 1, "cs_cost": 0, "predict": "oracle"}
     (res,) = doc["results"]
     assert set(res) == {"algorithm", "label", "preemptive", "quantum", "processes", "averages",
-                        "makespan", "gantt"}
+                        "summary", "makespan", "cores", "gantt"}
     assert (res["algorithm"], res["label"], res["preemptive"], res["quantum"]) == (
         "rr", "RoundRobin(q=3)", True, 3)
-    assert set(res["processes"][0]) == {"pid", "arrival", "burst", "start", "completion",
-                                        "response", "waiting", "turnaround"}
+    assert set(res["processes"][0]) == {"pid", "arrival", "burst", "io", "start", "completion",
+                                        "response", "waiting", "turnaround", "slowdown"}
     assert set(res["averages"]) == {"response", "waiting", "turnaround"}
-    assert all(set(s) == {"start", "end", "pid"} for s in res["gantt"])
+    assert set(res["summary"]) == {"turnaround", "waiting", "response", "slowdown_mean",
+                                   "slowdown_max", "jain_fairness_slowdown", "span", "throughput",
+                                   "cpu_utilization", "context_switches", "switch_time",
+                                   "switch_fraction"}
+    assert set(res["summary"]["turnaround"]) == {"mean", "median", "p95", "p99", "max"}
+    assert all(set(s) == {"start", "end", "pid", "type", "core"} for s in res["gantt"])
     assert files == []
 
 
