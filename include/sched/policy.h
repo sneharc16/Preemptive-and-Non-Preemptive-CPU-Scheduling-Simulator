@@ -8,23 +8,29 @@
  *   1. on_arrival(p)  for each process arriving at now, in (arrival, pid) order
  *   2. on_ready(p)    for each process whose I/O completes at now, in pid order
  *                     (NULL: on_arrival is used)
- *   3. slice outcomes, in core order, for slices ending at now:
+ *   3. slice outcomes, in core order, for slices that ran their full length
+ *      (or finished the burst) at now:
  *        on_complete(p, ran)  last CPU burst finished (optional hook)
  *        on_block(p, ran)     CPU burst finished, p starts I/O (optional hook)
  *        on_preempt(p, ran)   p still has CPU work in this burst; it is ready again
  *      `ran` is the number of ticks p ran in the slice (0 if it only switched in).
- *   4. if preempt_on_ready and steps 1-2 made anything ready, every process
- *      that is running mid-slice is interrupted with on_preempt(p, ran)
- *   5. next_slice(&s) is called once per free core (in core order) until it
+ *   4. switch-ins that finish at now start running (see below)
+ *   5. interruptions, in core order, with on_preempt(p, ran): slices cut by
+ *      their deadline and, for preempt_on_ready policies, every process
+ *      running mid-slice if the ready set gained a process at this instant
+ *      (steps 1-3 or a deadline cut), so the running set is re-chosen globally
+ *   6. next_slice(&s) is called once per free core (in core order) until it
  *      returns false. The chosen process leaves the ready set. It runs for
  *      min(s.length, remaining) ticks, ending early at s.deadline (absolute).
  *      Returning false while processes are ready leaves cores idle; only
  *      policies with work_conserving == false may do that.
  *
  * Context switches (--cs-cost) happen inside the engine. A switch-in is not
- * interruptible; when it ends, a preempt_on_ready policy gets the process
- * back via on_preempt(p, 0) if a ready event happened during the switch or
- * the slice deadline has passed.
+ * interruptible, and the process then always runs at least one tick (so
+ * switching can never livelock). If a ready event happened during the switch
+ * (preempt_on_ready policies) or the slice deadline passed, the slice ends
+ * after that one tick and is reported through on_preempt like any other
+ * interruption.
  *
  * Adding a policy: create src/policies/<name>.c defining a `const Policy`,
  * then add one line to the table in src/policies/registry.c.
@@ -42,6 +48,7 @@ typedef struct {
     const Process *procs; /* the workload, indexed 0..n-1 */
     size_t n;
     size_t cores;
+    int64_t cs_cost;          /* engine's context-switch cost */
     int64_t now;              /* current simulated time */
     const int64_t *remaining; /* remaining ticks of each process's current CPU burst */
     const int64_t *burst_len; /* true length of each process's current CPU burst */
