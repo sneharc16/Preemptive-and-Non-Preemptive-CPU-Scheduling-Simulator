@@ -66,3 +66,28 @@ jobs:
           python-version: "3.12"
       - run: pip install clang-format==23.1.1
       - run: make format-check
+
+  fuzz:
+    # Coverage-guided fuzzing of the input parsers and engine (libFuzzer with
+    # ASan + UBSan): 5 minutes on pushes, 1 minute on pull requests.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build fuzzer
+        run: |
+          clang -std=c11 -g -O1 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
+                -ffp-contract=off -Iinclude -Isrc tests/fuzz/fuzz_input.c \
+                $(ls src/*/*.c | grep -v src/cli/main.c) -o fuzz_input
+      - name: Fuzz
+        run: |
+          secs=60
+          if [ "${{ github.event_name }}" = "push" ]; then secs=300; fi
+          mkdir -p corpus && cp tests/fuzz/corpus/* corpus/
+          ./fuzz_input corpus -max_total_time=$secs -timeout=10 -rss_limit_mb=2048 \
+                       -print_final_stats=1 2>&1 | tail -25
+      - name: Keep crashing inputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: crash-*
