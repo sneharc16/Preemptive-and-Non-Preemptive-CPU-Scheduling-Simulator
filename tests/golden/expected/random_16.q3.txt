@@ -1,0 +1,39 @@
+Number of Processes: Enter details for each process on its own line: PID Arrival Burst
+
+FCFS (FIFO) Scheduling =>
+Gantt — FCFS:
+[0  ,8  ) P83  | [8  ,22 ) P98  | [22 ,28 ) P43  | [28 ,35 ) P71  | [35 ,41 ) P32  | [41 ,50 ) P10  | [50 ,54 ) P85  | [54 ,62 ) P65  | [62 ,69 ) P9   | [69 ,82 ) P37  | [82 ,91 ) P68  | [91 ,104) P35  
+
+FCFS Averages:
+  Response:  31.17
+  Waiting :  31.17
+  Turnaround:39.83
+
+SJF (Non-preemptive) Scheduling =>
+Gantt — SJF:
+[0  ,8  ) P83  | [8  ,14 ) P43  | [14 ,20 ) P32  | [20 ,24 ) P85  | [24 ,31 ) P71  | [31 ,38 ) P9   | [38 ,46 ) P65  | [46 ,55 ) P10  | [55 ,64 ) P68  | [64 ,77 ) P37  | [77 ,90 ) P35  | [90 ,104) P98  
+
+SJF Averages:
+  Response:  24.92
+  Waiting :  24.92
+  Turnaround:33.58
+
+SRTF (Preemptive SJF) Scheduling =>
+Gantt — SRTF:
+[0  ,8  ) P83  | [8  ,14 ) P43  | [14 ,20 ) P32  | [20 ,24 ) P85  | [24 ,31 ) P71  | [31 ,38 ) P9   | [38 ,46 ) P65  | [46 ,55 ) P10  | [55 ,64 ) P68  | [64 ,77 ) P37  | [77 ,90 ) P35  | [90 ,104) P98  
+
+SRTF Averages:
+  Response:  24.92
+  Waiting :  24.92
+  Turnaround:33.58
+
+Round Robin Scheduling (q=3) =>
+Gantt — RoundRobin(q=3):
+[0  ,3  ) P83  | [3  ,6  ) P98  | [6  ,9  ) P43  | [9  ,12 ) P71  | [12 ,15 ) P83  | [15 ,18 ) P32  | [18 ,21 ) P98  | [21 ,24 ) P10  | [24 ,27 ) P43  | [27 ,30 ) P71  | [30 ,32 ) P83  | [32 ,35 ) P85  | [35 ,38 ) P32  | [38 ,41 ) P98  | [41 ,44 ) P65  | [44 ,47 ) P10  | [47 ,50 ) P9   | [50 ,53 ) P37  | [53 ,56 ) P68  | [56 ,59 ) P35  | [59 ,60 ) P71  | [60 ,61 ) P85  | [61 ,64 ) P98  | [64 ,67 ) P65  | [67 ,70 ) P10  | [70 ,73 ) P9   | [73 ,76 ) P37  | [76 ,79 ) P68  | [79 ,82 ) P35  | [82 ,84 ) P98  | [84 ,86 ) P65  | [86 ,87 ) P9   | [87 ,90 ) P37  | [90 ,93 ) P68  | [93 ,96 ) P35  | [96 ,99 ) P37  | [99 ,102) P35  | [102,103) P37  | [103,104) P35  
+
+RoundRobin(q=3) Averages:
+  Response:  13.75
+  Waiting :  47.75
+  Turnaround:56.42
+
+CSV written: out.csv
