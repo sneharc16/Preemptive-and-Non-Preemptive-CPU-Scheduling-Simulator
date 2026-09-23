@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / ${{ matrix.cc }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, cc: gcc }
+          - { os: ubuntu-latest, cc: clang }
+          - { os: macos-latest, cc: clang }
+    env:
+      CC: ${{ matrix.cc }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest
+      - name: Build (-Werror)
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSCHED_WERROR=ON
+          cmake --build build -j 4
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -j 4
+      - name: Build with ASan + UBSan
+        run: |
+          cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug -DSCHED_SANITIZE=ON
+          cmake --build build-asan -j 4
+      - name: Test with ASan + UBSan
+        run: ctest --test-dir build-asan --output-on-failure -j 4
+
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      CC: gcc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest gcovr
+      - name: Coverage (fails below 90% line coverage of src/)
+        run: make coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          files: build-cov/coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install clang-format==23.1.1
+      - run: make format-check
