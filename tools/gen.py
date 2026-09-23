@@ -15,8 +15,11 @@ rounded to integers >= 1):
            variance) and scale mean*(alpha-1)/alpha, capped at --cap*mean
 
 With `--io-fraction F`, a fraction F of processes are I/O-bound: 3 to 7
-short CPU bursts (a quarter of a regular burst each) separated by I/O phases
-(exponential, mean `--io-mean`). The others are CPU-bound single bursts.
+CPU bursts separated by I/O phases (exponential, mean `--io-mean`). Each
+I/O-bound process draws a base burst (a quarter of a regular burst) and each
+of its CPU bursts is that base times a uniform factor in [0.5, 1.5], so a
+process's bursts are correlated, as in real programs (and as burst
+prediction assumes). The others are CPU-bound single bursts.
 Priorities (0-9), lottery tickets and nice values are drawn uniformly.
 
 The same arguments always produce the same file (Python's `random.Random`
@@ -59,11 +62,12 @@ def generate(n, seed=1, dist="exp", mean=10.0, rate=None, load=0.9, cores=1, alp
         if pid > 1:
             clock += rng.expovariate(rate)
         if rng.random() < io_fraction:
+            base = max(1, burst() / 4)
             phases = []
             for k in range(rng.randint(3, 7)):
                 if k:
                     phases.append(max(1, int(round(rng.expovariate(1.0 / io_mean)))))
-                phases.append(max(1, burst() // 4))
+                phases.append(max(1, int(round(base * rng.uniform(0.5, 1.5)))))
         else:
             phases = [burst()]
         rows.append(dict(pid=pid, arrival=int(clock), bursts=phases,
