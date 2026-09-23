@@ -58,6 +58,13 @@ foreach(name util workload input engine output)
   add_test(NAME unit_${name} COMMAND test_${name})
 endforeach()
 
+# Saved fuzzer inputs (seed corpus and crash regressions) replayed without
+# libFuzzer; the fuzzer itself is built in CI with -fsanitize=fuzzer.
+add_executable(fuzz_replay tests/fuzz/replay.c tests/fuzz/fuzz_input.c)
+target_link_libraries(fuzz_replay PRIVATE schedcore)
+file(GLOB SCHED_FUZZ_INPUTS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/fuzz/corpus/*)
+add_test(NAME fuzz_replay COMMAND fuzz_replay ${SCHED_FUZZ_INPUTS})
+
 if(SCHED_PYTHON_TESTS)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   foreach(suite golden cases cli differential optimality policies)

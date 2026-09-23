@@ -18,6 +18,10 @@ make                 # CMake Release build, copies the binary to ./sched
 make test            # build + all tests (C unit tests and Python suites via CTest)
 make asan            # Debug build with ASan + UBSan, runs every test under it
 make coverage        # gcov build + tests + gcovr report; fails below 90% line coverage of src/
+make experiments     # regenerate docs/results/ (plots, CSVs, takeaways, benchmarks; ~3 min)
+make perf-compare    # time priority/HRRN against the commit before their data-structure change
+make wasm            # browser build into build-wasm/site/ (needs emcc)
+make wasm-test       # WebAssembly output must equal the native binary's
 make format          # clang-format (pinned to 23.1.1 in CI) over tracked C sources
 make format-check    # what CI runs
 make clean
@@ -46,8 +50,13 @@ src/cli/main.c   argument parsing and orchestration (--gap, regret, files)
 tests/unit/      C unit tests (tiny header-only framework in check.h)
 tests/*.py       golden, cases, cli, differential, optimality, policies
 tests/golden/    baseline captured from the ORIGINAL main.c -- never regenerate
-tools/           reference_sim.py (naive tick-by-tick oracle), make_golden.py
-docs/            model.md (the model), json-schema.md (JSON output)
+tests/fuzz/      libFuzzer harness, replay driver, seed corpus (replayed by CTest)
+tests/wasm_smoke.mjs  WebAssembly-vs-native comparison (make wasm-test)
+tools/           reference_sim.py (naive tick-by-tick oracle), gen.py (workload
+                 generator), make_golden.py
+experiments/     benchmarks and experiments behind docs/results/ (make experiments)
+web/             browser visualiser (plain HTML/CSS/JS; loads sched.js from make wasm)
+docs/            model.md (the model), DESIGN.md, json-schema.md, results/ (generated)
 examples/        sample workloads
 ```
 
@@ -121,7 +130,13 @@ Other invariants:
   and property checks (`tests/properties.py`).
 - Build must stay warning-free with `-std=c11 -Wall -Wextra -Wpedantic -Werror`
   on gcc and clang, and the full suite must pass under ASan + UBSan.
-- Never invent numbers in docs or commit messages; run the code.
+- Never invent numbers in docs or commit messages; run the code. README and
+  docs quote docs/results/, which only `make experiments` (and
+  `make perf-compare`) may write.
+- Policies must not scan the whole ready set per decision: overloaded
+  benchmarks (docs/results/bench_overload.csv) would show it as quadratic.
+- The browser build calls main() repeatedly: keep src/ free of global state
+  and keep stack use modest (Emscripten's stack is set to 1 MB).
 - Conventional commit messages; small commits.
 
 ## CLI summary

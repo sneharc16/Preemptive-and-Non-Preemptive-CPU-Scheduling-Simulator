@@ -206,7 +206,7 @@ static SchedStatus parse_row(char **fields, int count, const int *col_of_field, 
         const Column *col = &COLUMNS[col_of_field[f]];
         if (*fields[f] == '\0' && !col->required) continue; /* default */
         if (col->kind == COL_PHASES) {
-            char copy[LINE_MAX_LEN];
+            char copy[96]; /* for the error message only */
             snprintf(copy, sizeof copy, "%s", fields[f]);
             nphases = parse_phases(fields[f], phases);
             if (nphases < 0) {
