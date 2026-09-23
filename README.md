@@ -1,252 +1,132 @@
-# Preemptive and Non-Preemptive CPU Scheduling Simulator
+# CPU Scheduling Simulator
+
+A verified, event-driven CPU scheduling lab in C11: 12 policies from FCFS to a CFS model and an exact optimum, multi-core, context switches, I/O and burst prediction, with an interactive WebAssembly visualiser.
 
 [![CI](https://github.com/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/branch/main/graph/badge.svg)](https://codecov.io/gh/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Live demo](https://img.shields.io/badge/demo-live-2a78d6.svg)](https://sneharc16.github.io/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/)
 
-A CPU scheduling simulator written in C11.
+**[Try it in the browser →](https://sneharc16.github.io/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/)** (the same C engine, compiled to WebAssembly)
 
-## Overview
+[![The visualiser comparing FCFS, SJF, SRTF and Round Robin on the convoy-effect preset](docs/img/visualiser.png)](https://sneharc16.github.io/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator/?preset=convoy)
 
-This project implements and compares CPU scheduling algorithms:
+## Quick start
 
-- **FCFS (First Come First Served, FIFO)** - Non-preemptive
-- **SJF (Shortest Job First)** - Non-preemptive
-- **SRTF (Shortest Remaining Time First)** - Preemptive
-- **Round Robin (RR)** - Preemptive with a time quantum
-- **Priority** - non-preemptive and preemptive, with optional aging
-- **HRRN (Highest Response Ratio Next)** - Non-preemptive
-- **MLFQ (Multi-Level Feedback Queue)** - following OSTEP chapter 8
-- **Lottery** and **Stride** - proportional share
-- **CFS-lite** - a simplified model of the Linux Completely Fair Scheduler
-- **opt-np** - the exact optimal non-preemptive schedule (offline baseline)
+```bash
+git clone https://github.com/sneharc16/Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator.git && cd Preemptive-and-Non-Preemptive-CPU-Scheduling-Simulator
+make
+./sched --input=examples/mixed.csv --algo=all,opt-np --gap --metrics=full
+```
 
-`--algo=classic` (the default) runs the first four; `--algo=all` runs every
-online policy. The precise model is documented in [docs/model.md](docs/model.md).
+Other useful commands: `make test` (all tests), `make asan` (all tests under ASan + UBSan), `make experiments` (regenerates every plot and number in [docs/results](docs/results/README.md)), `./sched --help`.
 
 ## Features
 
-- One event-driven simulation engine with a pluggable policy interface
-- Per-process metrics (start, completion, response, waiting, turnaround) and averages
-- Gantt charts (text) and an optional per-tick timeline
-- Output as text, CSV or JSON (`docs/json-schema.md`)
-- Input from stdin (interactive) or a CSV file
-- Input validation with clear error messages and exit codes
-- 64-bit time values with overflow checks
-- Optional realism: multiple cores, context-switch cost, I/O bursts, and
-  EWMA burst prediction with MAE/MAPE and regret against exact knowledge
-- Extended metrics (`--metrics=full`): median/p95/p99/max, slowdown, Jain's
-  fairness index, throughput, CPU utilisation, context switches
-- `--gap`: each policy's distance from the exact non-preemptive optimum
+| Policy (`--algo`) | Preemptive | Cost per decision | Starvation-free | Needs burst lengths |
+|---|---|---|---|---|
+| `fcfs` First Come First Served | no | O(1) | yes | no |
+| `sjf` Shortest Job First | no | O(log n) | no | yes (or `--predict=ewma`) |
+| `srtf` Shortest Remaining Time First | yes | O(log n) | no | yes (or `--predict=ewma`) |
+| `rr` Round Robin | yes | O(1) | yes | no |
+| `prio` / `prio-p` Priority | no / yes | O(log n) expected | only with `--aging` | no |
+| `hrrn` Highest Response Ratio Next | no | O(distinct burst lengths among ready) | yes | yes (or `--predict=ewma`) |
+| `mlfq` Multi-Level Feedback Queue (OSTEP rules) | yes | O(levels) | only with `--mlfq-boost` | no |
+| `lottery` Lottery | yes | O(log n) | with probability 1 | no |
+| `stride` Stride | yes | O(log n) | yes | no |
+| `cfs` CFS-lite (simplified Linux CFS model) | yes | O(log n) | yes | no |
+| `opt-np` exact non-preemptive optimum | no | branch and bound, n ≤ 20 | n/a (offline) | yes (offline) |
 
-## Build
+Machine model options (all off by default): `--cores=N` (one shared ready queue), `--cs-cost=C` (context-switch ticks), I/O phases via a `bursts` column (`cpu:io:cpu`), and `--predict=ewma --alpha --tau0` (burst prediction, with MAE/MAPE and regret against exact knowledge). Output is text, CSV or JSON ([schema](docs/json-schema.md)) with mean/median/p95/p99/max turnaround, waiting and response, slowdown, Jain's fairness index, throughput, utilisation and switch overhead. The precise model is in [docs/model.md](docs/model.md).
 
-Prerequisites: a C11 compiler (GCC or Clang), CMake >= 3.16, and Python 3
-with `pytest` for the tests.
+## Architecture
 
-```bash
-make            # builds ./sched (CMake Release build under build/)
-make test       # runs all tests
-make asan       # runs all tests under AddressSanitizer + UndefinedBehaviorSanitizer
-make coverage   # line coverage report (requires gcovr)
+```mermaid
+flowchart LR
+    subgraph IO[src/io]
+        IN[input.c<br/>CSV + interactive parsers]
+        OUT[output.c<br/>text / CSV / JSON]
+    end
+    CLI[src/cli/main.c<br/>flags, --gap, regret]
+    subgraph ENG[src/engine]
+        E[engine.c<br/>event loop, cores,<br/>switches, I/O, EWMA]
+        W[workload.c<br/>validation]
+    end
+    subgraph POL[src/policies]
+        IF{{Policy interface<br/>on_arrival, on_ready, next_slice,<br/>on_preempt, on_block, on_complete}}
+        P[fcfs sjf srtf rr prio hrrn<br/>mlfq lottery stride cfs opt-np]
+    end
+    M[src/metrics<br/>percentiles, fairness,<br/>prediction error]
+    CLI --> IN --> W
+    CLI --> E
+    E <--> IF
+    IF --- P
+    E --> M --> OUT
+    CLI --> OUT
+    WASM[web/ + Emscripten<br/>browser visualiser] -. calls main .-> CLI
 ```
 
-Without make:
+The engine owns time, cores, the timeline and all accounting; a policy only answers "who runs next, and for how long?". Adding a policy is one file plus one line in `src/policies/registry.c`. Details: [docs/DESIGN.md](docs/DESIGN.md).
 
-```bash
-cmake -S . -B build && cmake --build build
-./build/sched --help
-```
+## How correctness is verified
 
-## Usage
+- **Golden tests.** The original single-file program's output was captured before the rewrite (52 workloads × 4 quanta); the rewritten simulator reproduces its CSV byte for byte.
+- **Differential testing.** [`tools/reference_sim.py`](tools/reference_sim.py) is a deliberately naive tick-by-tick simulator that shares no code with the engine and re-decides every tick instead of reacting to events. On every test run, 5,000 random workloads, each with random cores, switch cost, I/O phases, prediction and policy parameters, must give identical per-core Gantt charts for all 11 online policies. This found two real engine bugs (a switch-in livelock and a multi-core re-decision gap), now fixed with regression tests.
+- **Properties on every schedule.** No gaps or overlaps; each process runs exactly its bursts, never during its I/O and never on two cores at once; no core idles while work is ready; every summary statistic is recomputed independently ([tests/properties.py](tests/properties.py)).
+- **Theorems as tests.** SJF equals the brute-force optimum when everyone arrives at once; SRTF equals an exhaustive search over all preemptive schedules; `opt-np` equals brute force over all job orders and is never beaten by a non-preemptive policy.
+- **Hand-computed cases** for every policy, context switches, I/O, multi-core and prediction.
+- **Sanitizers, fuzzing, coverage.** The whole suite runs under ASan + UBSan; a libFuzzer harness fuzzes the parsers and engine in CI; line coverage of `src/` is enforced at 90% or more; the WebAssembly build must print exactly what the native binary prints.
 
-```
-sched [--algo=all|fcfs,sjf,srtf,rr] [--quantum=Q] [--input=FILE]
-      [--format=text|csv|json] [--csv=FILE|--no-csv] [--no-gantt] [--per-tick]
-```
+## Key results
 
-| Option | Meaning |
-|--------|---------|
-| `--algo=LIST` | Comma-separated algorithms: `fcfs sjf srtf rr prio prio-p hrrn mlfq lottery stride cfs opt-np`, or `classic` (default), or `all` |
-| `--quantum=Q` | Time quantum for rr, lottery and stride, integer > 0 (default 2) |
-| `--aging=K` | Priority aging: effective priority improves by 1 per K ticks waiting |
-| `--mlfq-levels`, `--mlfq-quanta`, `--mlfq-allot`, `--mlfq-boost` | MLFQ configuration |
-| `--seed=N` | Lottery random seed (results are reproducible) |
-| `--cfs-latency`, `--cfs-min-gran` | CFS-lite parameters |
-| `--cores=N` | Number of CPUs sharing one ready queue (default 1) |
-| `--cs-cost=C` | Ticks per context switch between different processes (default 0) |
-| `--predict=oracle\|ewma`, `--alpha`, `--tau0` | Burst knowledge for SJF/SRTF/HRRN |
-| `--metrics=basic\|full` | Extended metrics in text and CSV output |
-| `--gap` | Report the optimality gap against opt-np |
-| `--summary-csv=FILE` | One row of aggregate metrics per algorithm |
-| `--input=FILE` | Read processes from a CSV file instead of stdin |
-| `--format=FMT` | Output format on stdout: `text` (default), `csv`, `json` |
-| `--csv=FILE` | Also write per-process metrics to FILE |
-| `--no-csv` | Do not write a CSV file (text mode writes `schedule_metrics.csv` by default) |
-| `--no-gantt` | Omit Gantt charts from text output |
-| `--per-tick` | Add a per-tick timeline to text output |
+Every number here comes from [docs/results](docs/results/README.md), which `make experiments` regenerates (benchmarks on an Apple M1).
 
-### Input
+**Scale.** At n = 1,000,000 processes every policy simulates in at most 1.67 s with at most 307 MB peak memory, and fitted log-log slopes lie between 1.01 and 1.06. Profiling showed priority scheduling and HRRN were quadratic under overload; replacing their scans with a treap and burst-length groups took prio-p with aging from 40.67 s to 0.21 s on 40,000 processes ([before/after](docs/results/perf/before_after.md)).
 
-**CSV file** (`--input=FILE`): a header row naming the columns (any order),
-then one process per line. Blank lines and lines starting with `#` are
-ignored. Required: `pid`, `arrival`, and `burst` or `bursts`. `bursts`
-describes alternating CPU and I/O phases, e.g. `5:3:2` (5 ticks of CPU, 3 of
-I/O, 2 of CPU). Optional: `priority` (lower runs first, default 0), `tickets`
-(default 100) and `nice` (-20..19, default 0).
+![Simulation time vs processes](docs/results/bench.png)
 
-```csv
-pid,arrival,burst
-1,0,5
-2,1,3
-3,2,8
-4,3,6
-5,4,4
-```
+**Size-based policies win on turnaround, MLFQ on response.** SRTF has the lowest mean turnaround for every burst distribution tested and MLFQ the lowest mean response; on Pareto bursts FCFS's mean turnaround is 8.2x the best.
 
-**Interactive (stdin)**: the number of processes, then one `PID Arrival Burst`
-line per process. The time quantum is given with `--quantum`, not on stdin.
+![Policies across burst distributions](docs/results/exp1_policy_comparison.png)
 
-```
-5
-1 0 5
-2 1 3
-3 2 8
-4 3 6
-5 4 4
-```
+**The Round Robin quantum trade-off.** With a switch cost of 2 ticks, mean turnaround is 3937 at q=1, 951 at q=12 and 1127 at q=128.
 
-Constraints: at least one process; PID >= 0 and unique; arrival >= 0;
-burst > 0; quantum > 0.
+![Round Robin quantum sweep](docs/results/exp2_rr_quantum.png)
 
-### Example
+**Greedy is not optimal.** Over 1,000 random instances, non-preemptive SJF matches the exact optimum on 70.1% of them (worst gap 64.6%), HRRN on 18.9% and FCFS on 12.7%.
 
-```bash
-./sched --input=examples/basic.csv --no-csv --no-gantt
-```
+![Optimality gap distribution](docs/results/exp7_optimality_gap.png)
 
-```
-FCFS (FIFO) Scheduling =>
-FCFS Averages:
-  Response:  8.20
-  Waiting :  8.20
-  Turnaround:13.40
+More in [docs/results](docs/results/README.md): the convoy effect, heavy-tailed workloads, EWMA prediction and starvation vs aging.
 
-SJF (Non-preemptive) Scheduling =>
-SJF Averages:
-  Response:  6.60
-  Waiting :  6.60
-  Turnaround:11.80
+## Design decisions and trade-offs
 
-SRTF (Preemptive SJF) Scheduling =>
-SRTF Averages:
-  Response:  5.80
-  Waiting :  6.40
-  Turnaround:11.60
-
-Round Robin Scheduling (q=2) =>
-RoundRobin(q=2) Averages:
-  Response:  2.80
-  Waiting :  12.60
-  Turnaround:17.80
-```
-
-With Gantt chart (`./sched --input=examples/basic.csv --no-csv --algo=srtf`):
-
-```
-Gantt — SRTF:
-[0  ,1  ) P1   | [1  ,4  ) P2   | [4  ,8  ) P1   | [8  ,12 ) P5   | [12 ,18 ) P4   | [18 ,26 ) P3
-```
-
-## Algorithm Specifications
-
-Ties are broken deterministically as listed. The newer policies (priority,
-HRRN, MLFQ, lottery, stride, CFS-lite, opt-np) are specified in
-[docs/model.md](docs/model.md).
-
-### First Come First Served (FCFS / FIFO)
-- **Type**: Non-preemptive
-- **Logic**: Runs processes in order of arrival; ties by PID
-- **Advantages**: Simple, no starvation
-- **Disadvantages**: Convoy effect: short jobs wait behind long ones
-
-### Shortest Job First (SJF)
-- **Type**: Non-preemptive
-- **Logic**: Picks the arrived process with the shortest burst; ties by arrival, then PID
-- **Advantages**: Minimises average waiting/turnaround time when all processes arrive at the same time
-- **Disadvantages**: Not optimal when processes arrive at different times; long jobs can starve; needs burst lengths in advance
-
-### Shortest Remaining Time First (SRTF)
-- **Type**: Preemptive
-- **Logic**: Always runs the process with the least remaining time; re-evaluated at each arrival; ties by arrival, then PID
-- **Advantages**: Minimises average waiting/turnaround time over all possible schedules
-- **Disadvantages**: More context switches, long jobs can starve, needs burst lengths in advance
-
-### Round Robin
-- **Type**: Preemptive
-- **Logic**: FIFO queue; each process runs for at most one quantum, then rejoins the back of the queue. Processes that arrive during or exactly at the end of a slice are queued before the preempted process.
-- **Advantages**: Fair, good response time, no starvation
-- **Disadvantages**: Performance depends heavily on the quantum
-
-## Performance Metrics
-
-- **Response time**: first time on the CPU − arrival
-- **Turnaround time**: completion − arrival
-- **Waiting time**: turnaround − burst
-
-## Error Handling
-
-Invalid input is reported on stderr with a specific message, for example
-`sched: error: duplicate PID 1: every process needs a unique PID` or
-`sched: error: line 3: burst of P2 must be > 0 (got 0)`.
-
-| Exit code | Meaning |
-|-----------|---------|
-| 0 | Success |
-| 1 | Invalid input (bad numbers, duplicate PIDs, empty input, overflow, ...) |
-| 2 | Invalid command-line usage (unknown option, bad quantum, unknown algorithm) |
-| 3 | A file could not be read or written |
-| 4 | Out of memory |
-
-## Testing
-
-`make test` runs:
-
-- C unit tests for every module
-- Golden tests: output must match the original implementation's saved output
-- Hand-computed textbook cases with expected Gantt charts
-- Differential testing of every policy against an independent tick-by-tick
-  reference simulator (`tools/reference_sim.py`) on 5,000 random workloads with
-  random cores, switch costs, I/O and prediction settings, with invariant
-  checks on every schedule
-- Optimality checks: SJF against brute force when all processes arrive at t=0,
-  SRTF against an exhaustive search over all preemptive schedules, and opt-np
-  against brute force over all job orders
-- Command-line and error-handling tests
-
-## Project Structure
-
-```
-include/sched/   public headers
-src/engine/      simulation engine and workload validation
-src/policies/    one file per scheduling policy + registry
-src/io/          input parsers and text/CSV/JSON output
-src/metrics/     metric calculations
-src/cli/         command-line front end
-tests/           unit, golden, differential, optimality and CLI tests
-tools/           reference simulator and golden-file generator
-examples/        sample workloads
-```
+- **Event-driven engine, tick-level reference.** The engine jumps between events (O(events × log n)); the reference steps every tick and is slow but obviously correct. Agreement between two very different implementations is the main correctness argument.
+- **Policies decide, the engine accounts.** Policies see a read-only view and return `(process, length, deadline)`; they never touch time or metrics, so one engine serves every policy and machine option.
+- **Exact arithmetic.** All time is `int64_t` with validated bounds; HRRN compares ratios as exact fractions; CFS uses fixed-point vruntime; floating point appears only in EWMA and is built with `-ffp-contract=off`, so results match across compilers and the Python reference.
+- **Deterministic by construction.** Every tie is broken by (arrival, pid) and lottery uses its own seeded SplitMix64 generator, so every run on every platform is reproducible.
+- **Semantics made explicit.** Cases textbooks leave open (an arrival coinciding with a preemption, what can interrupt a switch-in, how MLFQ treats an interrupted job) are written down in [docs/model.md](docs/model.md) and pinned by tests.
+- **Backward compatible.** The original command-line behaviour and output are preserved at default options; new output only appears with new flags.
 
 ## Limitations
 
-- Multiple cores share one ready queue; per-core queues, load balancing and
-  cache effects are not modelled
-- The I/O device has unlimited capacity
-- CFS-lite is a simplified model of Linux CFS, not a reimplementation
-- Time is measured in integer ticks
-- The full Gantt chart is kept in memory and limited to 16,777,216 segments
+- Integer ticks; no sub-tick events.
+- Multi-core uses one global ready queue: no per-core run queues, load balancing, cache affinity or migration cost beyond the ordinary switch cost.
+- The I/O device has unlimited capacity (no I/O queueing).
+- CFS-lite omits wakeup preemption, period stretching, START_DEBIT and group scheduling; it models CFS's idea, not its code.
+- `opt-np` is exact but exponential in the worst case: at most 20 processes, one core, no I/O or switch cost.
+- Workloads are synthetic (`tools/gen.py`); there is no trace replay yet.
 
-## License
+## References
 
-Released under the MIT License. See [LICENSE](LICENSE).
+- R. H. Arpaci-Dusseau and A. C. Arpaci-Dusseau, *Operating Systems: Three Easy Pieces*, chapters 7-9 (scheduling, MLFQ, proportional share). https://pages.cs.wisc.edu/~remzi/OSTEP/
+- A. Silberschatz, P. B. Galvin and G. Gagne, *Operating System Concepts*, chapter 5 (CPU scheduling).
+- Linux kernel documentation, "CFS Scheduler". https://docs.kernel.org/scheduler/sched-design-CFS.html
+- C. A. Waldspurger and W. E. Weihl, "Lottery Scheduling: Flexible Proportional-Share Resource Management", OSDI 1994.
+- C. A. Waldspurger, "Lottery and Stride Scheduling: Flexible Proportional-Share Resource Management", PhD thesis, MIT, 1995.
+- L. Schrage, "A Proof of the Optimality of the Shortest Remaining Processing Time Discipline", Operations Research 16(3), 1968.
+- J. K. Lenstra, A. H. G. Rinnooy Kan and P. Brucker, "Complexity of Machine Scheduling Problems", Annals of Discrete Mathematics 1, 1977 (1|r_j|ΣC_j is strongly NP-hard).
+
+## Contributing and licence
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md). Released under the [MIT License](LICENSE).
