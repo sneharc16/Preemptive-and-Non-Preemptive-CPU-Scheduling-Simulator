@@ -1,0 +1,55 @@
+// Preset workloads. Each process: [pid, arrival, bursts ("5" or "5:3:2"), priority, tickets, nice]
+export const PRESETS = {
+  textbook: {
+    label: "Textbook (README example)",
+    note: "Five processes with staggered arrivals: the classic comparison.",
+    algos: ["fcfs", "sjf", "srtf", "rr"],
+    params: {},
+    procs: [[1, 0, "5"], [2, 1, "3"], [3, 2, "8"], [4, 3, "6"], [5, 4, "4"]],
+  },
+  convoy: {
+    label: "Convoy effect",
+    note: "One long job arrives first. FCFS and SJF make every short job wait behind it; SRTF and RR do not.",
+    algos: ["fcfs", "sjf", "srtf", "rr"],
+    params: { quantum: 3 },
+    procs: [[1, 0, "30"], [2, 1, "2"], [3, 1, "3"], [4, 2, "2"], [5, 2, "1"], [6, 3, "2"], [7, 4, "3"]],
+  },
+  sjfnotoptimal: {
+    label: "SJF is not optimal",
+    note: "With staggered arrivals, idling for one tick beats greedy SJF (total turnaround 14 vs 19).",
+    algos: ["sjf", "srtf", "opt-np"],
+    params: {},
+    procs: [[2, 5, "9"], [1, 6, "2"]],
+  },
+  starvation: {
+    label: "Starvation and aging",
+    note: "P1 has the lowest priority (9) and a stream of priority-1 jobs keeps arriving. Try aging = 0 vs 4.",
+    algos: ["prio", "prio-p", "rr"],
+    params: { aging: 4, quantum: 2 },
+    procs: [[1, 0, "4", 9], [2, 0, "3", 1], [3, 3, "3", 1], [4, 6, "3", 1], [5, 9, "3", 1],
+            [6, 12, "3", 1], [7, 15, "3", 1], [8, 18, "3", 1], [9, 21, "3", 1]],
+  },
+  heavytail: {
+    label: "Heavy-tailed bursts",
+    note: "Mostly tiny jobs plus a few huge ones: size-based and multilevel policies shine.",
+    algos: ["fcfs", "srtf", "rr", "mlfq"],
+    params: { quantum: 2 },
+    procs: [[1, 0, "2"], [2, 1, "40"], [3, 2, "1"], [4, 4, "3"], [5, 5, "1"], [6, 7, "2"],
+            [7, 8, "25"], [8, 10, "1"], [9, 12, "2"], [10, 13, "1"]],
+  },
+  io: {
+    label: "I/O-bound mix",
+    note: "Bursts alternate CPU and I/O (cpu:io:cpu). Interactive jobs return from I/O often; MLFQ keeps them responsive.",
+    algos: ["rr", "mlfq", "cfs", "srtf"],
+    params: { quantum: 4, cs: 1 },
+    procs: [[1, 0, "2:4:2:4:2"], [2, 0, "12"], [3, 1, "1:3:1:3:1:3:1"], [4, 2, "10"],
+            [5, 3, "2:2:2"]],
+  },
+  fairshare: {
+    label: "Proportional share",
+    note: "Tickets 100:200:300 (lottery, stride) and nice 5 / 0 / -5 (CFS-lite).",
+    algos: ["lottery", "stride", "cfs", "rr"],
+    params: { quantum: 1 },
+    procs: [[1, 0, "12", 0, 100, 5], [2, 0, "12", 0, 200, 0], [3, 0, "12", 0, 300, -5]],
+  },
+};
