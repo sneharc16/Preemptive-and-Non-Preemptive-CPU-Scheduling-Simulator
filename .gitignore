@@ -1,0 +1,22 @@
+# Build trees and binaries
+/build*/
+/sched
+*.o
+*.a
+
+# Coverage data
+*.gcda
+*.gcno
+*.gcov
+
+# Program output
+schedule_metrics.csv
+
+# Python
+__pycache__/
+.pytest_cache/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store

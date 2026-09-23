@@ -1,0 +1,39 @@
+Number of Processes: Enter details for each process on its own line: PID Arrival Burst
+
+FCFS (FIFO) Scheduling =>
+Gantt — FCFS:
+[0  ,8  ) IDLE  | [8  ,17 ) P13  | [17 ,19 ) P86  | [19 ,21 ) P24  | [21 ,26 ) P21  | [26 ,34 ) P28  | [34 ,46 ) P45  | [46 ,57 ) P8   | [57 ,58 ) P71  | [58 ,73 ) P75  | [73 ,75 ) P47  
+
+FCFS Averages:
+  Response:  17.50
+  Waiting :  17.50
+  Turnaround:24.20
+
+SJF (Non-preemptive) Scheduling =>
+Gantt — SJF:
+[8  ,17 ) P13  | [17 ,19 ) P86  | [19 ,21 ) P24  | [21 ,26 ) P21  | [26 ,27 ) P71  | [27 ,29 ) P47  | [29 ,37 ) P28  | [37 ,48 ) P8   | [48 ,60 ) P45  | [60 ,75 ) P75  
+
+SJF Averages:
+  Response:  10.80
+  Waiting :  10.80
+  Turnaround:17.50
+
+SRTF (Preemptive SJF) Scheduling =>
+Gantt — SRTF:
+[8  ,11 ) P13  | [11 ,13 ) P86  | [13 ,14 ) P13  | [14 ,16 ) P24  | [16 ,21 ) P13  | [21 ,23 ) P21  | [23 ,24 ) P71  | [24 ,27 ) P21  | [27 ,29 ) P47  | [29 ,37 ) P28  | [37 ,48 ) P8   | [48 ,60 ) P45  | [60 ,75 ) P75  
+
+SRTF Averages:
+  Response:  9.40
+  Waiting :  9.90
+  Turnaround:16.60
+
+Round Robin Scheduling (q=1) =>
+Gantt — RoundRobin(q=1):
+[8  ,11 ) P13  | [11 ,12 ) P86  | [12 ,13 ) P13  | [13 ,14 ) P86  | [14 ,15 ) P13  | [15 ,16 ) P24  | [16 ,17 ) P13  | [17 ,18 ) P24  | [18 ,19 ) P21  | [19 ,20 ) P13  | [20 ,21 ) P28  | [21 ,22 ) P21  | [22 ,23 ) P45  | [23 ,24 ) P13  | [24 ,25 ) P28  | [25 ,26 ) P21  | [26 ,27 ) P8   | [27 ,28 ) P71  | [28 ,29 ) P75  | [29 ,30 ) P45  | [30 ,31 ) P13  | [31 ,32 ) P28  | [32 ,33 ) P21  | [33 ,34 ) P47  | [34 ,35 ) P8   | [35 ,36 ) P75  | [36 ,37 ) P45  | [37 ,38 ) P28  | [38 ,39 ) P21  | [39 ,40 ) P47  | [40 ,41 ) P8   | [41 ,42 ) P75  | [42 ,43 ) P45  | [43 ,44 ) P28  | [44 ,45 ) P8   | [45 ,46 ) P75  | [46 ,47 ) P45  | [47 ,48 ) P28  | [48 ,49 ) P8   | [49 ,50 ) P75  | [50 ,51 ) P45  | [51 ,52 ) P28  | [52 ,53 ) P8   | [53 ,54 ) P75  | [54 ,55 ) P45  | [55 ,56 ) P28  | [56 ,57 ) P8   | [57 ,58 ) P75  | [58 ,59 ) P45  | [59 ,60 ) P8   | [60 ,61 ) P75  | [61 ,62 ) P45  | [62 ,63 ) P8   | [63 ,64 ) P75  | [64 ,65 ) P45  | [65 ,66 ) P8   | [66 ,67 ) P75  | [67 ,68 ) P45  | [68 ,69 ) P8   | [69 ,70 ) P75  | [70 ,71 ) P45  | [71 ,75 ) P75  
+
+RoundRobin(q=1) Averages:
+  Response:  2.40
+  Waiting :  19.00
+  Turnaround:25.70
+
+CSV written: out.csv

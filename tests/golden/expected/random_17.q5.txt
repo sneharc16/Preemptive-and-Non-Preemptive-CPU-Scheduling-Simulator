@@ -1,0 +1,39 @@
+Number of Processes: Enter details for each process on its own line: PID Arrival Burst
+
+FCFS (FIFO) Scheduling =>
+Gantt — FCFS:
+[0  ,12 ) IDLE  | [12 ,23 ) P87  | [23 ,34 ) P72  
+
+FCFS Averages:
+  Response:  1.00
+  Waiting :  1.00
+  Turnaround:12.00
+
+SJF (Non-preemptive) Scheduling =>
+Gantt — SJF:
+[12 ,23 ) P87  | [23 ,34 ) P72  
+
+SJF Averages:
+  Response:  1.00
+  Waiting :  1.00
+  Turnaround:12.00
+
+SRTF (Preemptive SJF) Scheduling =>
+Gantt — SRTF:
+[12 ,23 ) P87  | [23 ,34 ) P72  
+
+SRTF Averages:
+  Response:  1.00
+  Waiting :  1.00
+  Turnaround:12.00
+
+Round Robin Scheduling (q=5) =>
+Gantt — RoundRobin(q=5):
+[12 ,22 ) P87  | [22 ,27 ) P72  | [27 ,28 ) P87  | [28 ,34 ) P72  
+
+RoundRobin(q=5) Averages:
+  Response:  0.50
+  Waiting :  3.50
+  Turnaround:14.50
+
+CSV written: out.csv
