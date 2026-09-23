@@ -72,7 +72,7 @@ SchedStatus read_workload_interactive(FILE *in, FILE *prompts, Workload *w, Sche
         fputs("Enter details for each process on its own line: PID Arrival Burst\n", prompts);
 
     for (int64_t i = 1; i <= n; i++) {
-        Process p;
+        Process p = process_make(0, 0, 0);
         char what[64];
         snprintf(what, sizeof what, "PID of process #%" PRId64, i);
         if ((st = read_int_token(in, what, &p.pid, err)) != SCHED_OK) return st;
@@ -90,20 +90,29 @@ SchedStatus read_workload_interactive(FILE *in, FILE *prompts, Workload *w, Sche
 
 enum { LINE_MAX_LEN = 4096, MAX_COLUMNS = 16 };
 
-/* Known columns. Optional columns added later (priority, tickets, ...) get a
- * row here with required = false and a default applied before parsing. */
+/* Known columns. An optional column gets a row with required = false; its
+ * default comes from process_make() and applies when the column is absent
+ * or the field is empty. */
+typedef enum { COL_INT, COL_PHASES } ColumnKind;
+
 typedef struct {
     const char *name;
-    size_t offset; /* int64_t field inside Process */
+    ColumnKind kind;
+    size_t offset; /* COL_INT: int64_t field inside Process */
     bool required;
 } Column;
 
 static const Column COLUMNS[] = {
-    {"pid", offsetof(Process, pid), true},
-    {"arrival", offsetof(Process, arrival), true},
-    {"burst", offsetof(Process, burst), true},
+    {"pid", COL_INT, offsetof(Process, pid), true},
+    {"arrival", COL_INT, offsetof(Process, arrival), true},
+    {"burst", COL_INT, offsetof(Process, burst), false},
+    {"bursts", COL_PHASES, 0, false},
+    {"priority", COL_INT, offsetof(Process, priority), false},
+    {"tickets", COL_INT, offsetof(Process, tickets), false},
+    {"nice", COL_INT, offsetof(Process, nice), false},
 };
-enum { NUM_KNOWN_COLUMNS = sizeof COLUMNS / sizeof COLUMNS[0] };
+enum { NUM_KNOWN_COLUMNS = sizeof COLUMNS / sizeof COLUMNS[0], COL_BURST = 2, COL_BURSTS = 3 };
+enum { MAX_PHASES = LINE_MAX_LEN / 2 };
 
 static char *trim(char *s) {
     while (isspace((unsigned char)*s)) s++;
@@ -161,26 +170,89 @@ static SchedStatus parse_header(char **fields, int count, int *col_of_field, siz
             return SCHED_E_INPUT;
         }
     }
+    if (!seen[COL_BURST] && !seen[COL_BURSTS]) {
+        sched_error_set(err, "line %zu: header is missing required column 'burst' (or 'bursts')",
+                        line);
+        return SCHED_E_INPUT;
+    }
     return SCHED_OK;
 }
 
+/* Parses "cpu:io:...:cpu" into phases; returns the count or -1. */
+static int parse_phases(char *text, int64_t *phases) {
+    int count = 0;
+    char *p = text;
+    for (;;) {
+        char *colon = strchr(p, ':');
+        if (colon) *colon = '\0';
+        if (count == MAX_PHASES || !parse_i64(trim(p), &phases[count])) return -1;
+        count++;
+        if (!colon) return count;
+        p = colon + 1;
+    }
+}
+
 static SchedStatus parse_row(char **fields, int count, const int *col_of_field, int header_count,
-                             size_t line, Process *p, SchedError *err) {
+                             size_t line, Workload *w, SchedError *err) {
     if (count != header_count) {
         sched_error_set(err, "line %zu: expected %d fields, found %d", line, header_count, count);
         return SCHED_E_INPUT;
     }
+    Process p = process_make(0, 0, 0);
+    int64_t phases[MAX_PHASES];
+    int nphases = 0;
+    bool have_burst = false;
     for (int f = 0; f < count; f++) {
         const Column *col = &COLUMNS[col_of_field[f]];
+        if (*fields[f] == '\0' && !col->required) continue; /* default */
+        if (col->kind == COL_PHASES) {
+            char copy[LINE_MAX_LEN];
+            snprintf(copy, sizeof copy, "%s", fields[f]);
+            nphases = parse_phases(fields[f], phases);
+            if (nphases < 0) {
+                sched_error_set(err,
+                                "line %zu: column 'bursts' must be integers separated by ':' "
+                                "(got '%s')",
+                                line, copy);
+                return SCHED_E_INPUT;
+            }
+            continue;
+        }
         int64_t v;
         if (!parse_i64(fields[f], &v)) {
             sched_error_set(err, "line %zu: column '%s' must be a 64-bit integer (got '%s')", line,
                             col->name, fields[f]);
             return SCHED_E_INPUT;
         }
-        memcpy((char *)p + col->offset, &v, sizeof v);
+        memcpy((char *)&p + col->offset, &v, sizeof v);
+        if (col_of_field[f] == COL_BURST) have_burst = true;
     }
-    return process_validate(p, line, err);
+    SchedStatus st;
+    if (nphases > 0) {
+        if (nphases % 2 == 0) {
+            sched_error_set(err,
+                            "line %zu: bursts of P%" PRId64
+                            " must alternate cpu:io:...:cpu (an odd number of values)",
+                            line, p.pid);
+            return SCHED_E_INPUT;
+        }
+        for (int k = 0; k < nphases; k++) {
+            if (phases[k] <= 0) {
+                sched_error_set(
+                    err, "line %zu: bursts of P%" PRId64 " must all be > 0 (got %" PRId64 ")", line,
+                    p.pid, phases[k]);
+                return SCHED_E_INPUT;
+            }
+        }
+        p.burst = phases[0]; /* placeholder for process_validate; recomputed on push */
+    } else if (!have_burst) {
+        sched_error_set(err, "line %zu: P%" PRId64 " has neither a burst nor bursts value", line,
+                        p.pid);
+        return SCHED_E_INPUT;
+    }
+    if ((st = process_validate(&p, line, err)) != SCHED_OK) return st;
+    if (nphases > 0) return workload_push_phases(w, p, phases, (size_t)nphases, err);
+    return workload_push(w, p, err);
 }
 
 SchedStatus read_workload_csv(FILE *in, Workload *w, SchedError *err) {
@@ -213,10 +285,8 @@ SchedStatus read_workload_csv(FILE *in, Workload *w, SchedError *err) {
             header_count = count;
             continue;
         }
-        Process p = {0};
-        if ((st = parse_row(fields, count, col_of_field, header_count, line, &p, err)) != SCHED_OK)
+        if ((st = parse_row(fields, count, col_of_field, header_count, line, w, err)) != SCHED_OK)
             return st;
-        if ((st = workload_push(w, p, err)) != SCHED_OK) return st;
     }
     if (ferror(in)) {
         sched_error_set(err, "read error after line %zu", line);

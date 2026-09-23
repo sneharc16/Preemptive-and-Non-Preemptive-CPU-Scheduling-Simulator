@@ -12,14 +12,14 @@ typedef struct {
     int64_t quantum;
 } Rr;
 
-static void *rr_create(const SchedView *view, const PolicyParams *params) {
+static void *rr_create(const SchedView *view, const PolicyParams *params, SchedError *err) {
     Rr *s = malloc(sizeof *s);
-    if (!s) return NULL;
-    s->quantum = params->quantum;
-    if (!queue_init(&s->ready, view->n)) {
+    if (!s || !queue_init(&s->ready, view->n)) {
         free(s);
+        sched_error_set(err, "out of memory");
         return NULL;
     }
+    s->quantum = params->quantum;
     return s;
 }
 
@@ -31,11 +31,17 @@ static void rr_destroy(void *self) {
 
 static void rr_enqueue(void *self, size_t proc) { queue_push(&((Rr *)self)->ready, proc); }
 
+static void rr_requeue(void *self, size_t proc, int64_t ran) {
+    (void)ran;
+    rr_enqueue(self, proc);
+}
+
 static bool rr_next_slice(void *self, Slice *out) {
     Rr *s = self;
     if (queue_empty(&s->ready)) return false;
     out->proc = queue_pop(&s->ready);
     out->length = s->quantum;
+    out->deadline = SCHED_NO_DEADLINE;
     return true;
 }
 
@@ -44,12 +50,13 @@ const Policy POLICY_RR = {
     .label = "RoundRobin",
     .heading = "Round Robin Scheduling",
     .preemptive = true,
-    .preempt_on_arrival = false,
+    .preempt_on_ready = false,
     .uses_quantum = true,
+    .uses_estimates = false,
+    .work_conserving = true,
     .create = rr_create,
     .destroy = rr_destroy,
     .on_arrival = rr_enqueue,
     .next_slice = rr_next_slice,
-    .on_preempt = rr_enqueue,
-    .on_complete = NULL,
+    .on_preempt = rr_requeue,
 };
