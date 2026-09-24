@@ -115,8 +115,15 @@ void write_text_result(FILE *out, const ReportItem *item, const TextOptions *opt
             avg.response, avg.waiting, avg.turnaround);
     if (opt->full) write_full_metrics(out, item, label);
     if (item->has_gap) {
-        fprintf(out, "%s optimality gap: %.2f%% above the opt-np mean turnaround\n\n", label,
-                item->gap_pct);
+        if (item->gap_pct < 0) {
+            fprintf(out,
+                    "%s optimality gap: %.2f%% below the opt-np mean turnaround "
+                    "(preemption can beat the non-preemptive optimum)\n\n",
+                    label, -item->gap_pct);
+        } else {
+            fprintf(out, "%s optimality gap: %.2f%% above the opt-np mean turnaround\n\n", label,
+                    item->gap_pct);
+        }
     }
     if (item->has_regret) {
         fprintf(out, "%s prediction regret: %.2f%% mean turnaround vs oracle\n\n", label,

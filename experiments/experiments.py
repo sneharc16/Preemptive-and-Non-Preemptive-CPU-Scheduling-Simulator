@@ -105,7 +105,9 @@ def policy_comparison():
             f"{', '.join(sorted(set(best_mean.values())))}; lowest mean response: "
             f"{', '.join(f'{best_resp[d]} ({d})' for d in DISTS)}; on Pareto bursts FCFS's "
             f"mean turnaround is {values[('fcfs', 'pareto')][0] / values[(best_mean['pareto'], 'pareto')][0]:.1f}x "
-            f"the best.")
+            f"the best. Priority, lottery, stride and CFS-lite follow the generator's random "
+            f"priorities, tickets and nice values here, so they trade some mean performance "
+            f"for weighted shares by design.")
 
 
 # 2 ------------------------------------------------------------------------
@@ -180,7 +182,7 @@ def heavy_tail():
     slow, p99, rows = {a: [] for a in algs}, {a: [] for a in algs}, []
     for alpha in alphas:
         res = results(run_csv(workload(n=2000, seed=14, dist="pareto", mean=10, load=0.9,
-                                       alpha=alpha), [f"--algo={','.join(algs)}", "--quantum=4"]))
+                                       alpha=alpha, unweighted=True), [f"--algo={','.join(algs)}", "--quantum=4"]))
         for a in algs:
             s = res[a]["summary"]
             slow[a].append(s["slowdown_mean"])
@@ -198,14 +200,15 @@ def heavy_tail():
     p2 = line_panel(a2, alphas, [(a.upper(), p99[a]) for a in algs],
                     "Pareto shape alpha (smaller = heavier tail)", "p99 turnaround (ticks, log)",
                     "Tail turnaround", logy=True)
-    finish(fig, [(a1, p1), (a2, p2)], "Heavy-tailed bursts (Pareto, mean 10, 90% load)",
+    finish(fig, [(a1, p1), (a2, p2)], "Heavy-tailed bursts (Pareto, mean 10, 90% load, equal weights: nice 0)",
            "exp4_heavy_tail")
     i = alphas.index(1.1)
     ranked = sorted(algs, key=lambda a: slow[a][i])
     return (f"At alpha = 1.1 mean slowdown is {slow['srtf'][i]:.2f} for SRTF, "
             f"{slow['mlfq'][i]:.2f} for MLFQ, {slow['rr'][i]:.2f} for RR and "
             f"{slow['cfs'][i]:.2f} for CFS-lite; MLFQ, which needs no burst knowledge, ranks "
-            f"#{ranked.index('mlfq') + 1} of 4.")
+            f"#{ranked.index('mlfq') + 1} of 4. Every process has nice 0, so CFS-lite shares "
+            f"the CPU equally, like the other three.")
 
 
 # 5 ------------------------------------------------------------------------

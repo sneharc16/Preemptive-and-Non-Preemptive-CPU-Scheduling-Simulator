@@ -43,8 +43,14 @@ def results(doc):
     return {res["algorithm"]: res for res in doc["results"]}
 
 
-def workload(**kw):
-    return gen.to_csv(gen.generate(**kw))
+def workload(unweighted=False, **kw):
+    """Generated workload as CSV. unweighted=True gives every process priority 0,
+    100 tickets and nice 0, so weight-aware policies compete on equal terms."""
+    rows = gen.generate(**kw)
+    if unweighted:
+        for r in rows:
+            r.update(priority=0, tickets=100, nice=0)
+    return gen.to_csv(rows)
 
 
 def rows_csv(rows, header):

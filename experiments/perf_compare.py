@@ -18,7 +18,21 @@ import tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import BIN, RESULTS, ROOT, workload, write_table  # noqa: E402
 
-BEFORE = "72d2d26"  # parent of "perf: make priority and HRRN decisions sub-linear"
+PERF_SUBJECT = "perf: make priority and HRRN decisions sub-linear"
+
+
+def before_commit():
+    """Parent of the perf commit, found by subject so rewritten history cannot break it."""
+    perf = subprocess.run(["git", "-C", ROOT, "log", "--format=%H", "-F",
+                           f"--grep={PERF_SUBJECT}"], check=True, capture_output=True,
+                          text=True).stdout.split()
+    if not perf:
+        sys.exit(f"perf_compare: no commit with subject {PERF_SUBJECT!r}")
+    return subprocess.run(["git", "-C", ROOT, "rev-parse", "--short", perf[-1] + "^"],
+                          check=True, capture_output=True, text=True).stdout.strip()
+
+
+BEFORE = before_commit()
 CASES = [("prio-p", ["--aging=5"]), ("prio", []), ("hrrn", [])]
 SIZES = [10_000, 40_000]
 REPEATS = 3
