@@ -54,6 +54,7 @@ jobs:
       - uses: codecov/codecov-action@v5
         with:
           files: build-cov/coverage.xml
+          disable_search: true # upload only gcovr's src/ report
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
