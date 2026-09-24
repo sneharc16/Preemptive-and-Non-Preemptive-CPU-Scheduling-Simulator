@@ -21,8 +21,8 @@ jobs:
     env:
       CC: ${{ matrix.cc }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install pytest
@@ -44,14 +44,14 @@ jobs:
     env:
       CC: gcc
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install pytest gcovr
       - name: Coverage (fails below 90% line coverage of src/)
         run: make coverage
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v7
         with:
           files: build-cov/coverage.xml
           disable_search: true # upload only gcovr's src/ report
@@ -61,8 +61,8 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install clang-format==23.1.1
@@ -73,7 +73,7 @@ jobs:
     # ASan + UBSan): 5 minutes on pushes, 1 minute on pull requests.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build fuzzer
         run: |
           clang -std=c11 -g -O1 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
@@ -88,7 +88,7 @@ jobs:
                        -print_final_stats=1 2>&1 | tail -25
       - name: Keep crashing inputs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fuzz-crashes
           path: crash-*
