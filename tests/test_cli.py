@@ -205,6 +205,15 @@ def test_gap_text_output(sched_bin):
     assert "opt-np optimum mean turnaround: 7.00" in r.stdout
 
 
+def test_gap_text_output_below_optimum(sched_bin):
+    # opt-np idles one tick (mean 6.5); SRTF preempts P1 instead (mean 6.0)
+    r, _ = run(sched_bin, ["--algo=srtf", "--gap", "--no-csv", "--no-gantt"],
+               stdin_text([(1, 0, 10), (2, 1, 1)]))
+    assert r.returncode == 0, r.stderr
+    assert ("SRTF optimality gap: 7.69% below the opt-np mean turnaround "
+            "(preemption can beat the non-preemptive optimum)") in r.stdout
+
+
 def test_ewma_text_output(sched_bin):
     r, _ = run(sched_bin, ["--algo=sjf", "--predict=ewma", "--no-csv", "--no-gantt"],
                stdin_text([(1, 0, 8), (2, 0, 2)]))

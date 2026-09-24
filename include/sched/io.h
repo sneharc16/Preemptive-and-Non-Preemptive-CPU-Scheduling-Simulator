@@ -34,7 +34,7 @@ typedef struct {
     const SimResult *sim;
     Summary summary;
     bool has_gap;
-    double gap_pct; /* mean turnaround vs opt-np, percent above optimum */
+    double gap_pct; /* mean turnaround vs opt-np, percent above optimum; negative = below */
     bool has_regret;
     double regret_pct; /* mean turnaround with EWMA vs oracle, percent */
 } ReportItem;
