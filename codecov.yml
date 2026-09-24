@@ -1,0 +1,5 @@
+# Report line coverage, like the 90% gate in `make coverage`: a line that ran
+# counts as covered even if not every branch on it was taken.
+parsers:
+  cobertura:
+    partials_as_hits: true
