@@ -81,7 +81,7 @@ The engine owns time, cores, the timeline and all accounting; a policy only answ
 
 Every number here comes from [docs/results](docs/results/README.md), which `make experiments` regenerates (benchmarks on an Apple M1).
 
-**Scale.** At n = 1,000,000 processes every policy simulates in at most 1.67 s with at most 307 MB peak memory, and fitted log-log slopes lie between 1.01 and 1.06. Profiling showed priority scheduling and HRRN were quadratic under overload; replacing their scans with a treap and burst-length groups took prio-p with aging from 40.67 s to 0.21 s on 40,000 processes ([before/after](docs/results/perf/before_after.md)).
+**Scale.** At n = 1,000,000 processes every policy simulates in at most 1.63 s with at most 307 MB peak memory, and fitted log-log slopes lie between 1.00 and 1.07. Profiling showed priority scheduling and HRRN were quadratic under overload; replacing their scans with a treap and burst-length groups took prio-p with aging from 40.55 s to 0.20 s on 40,000 processes ([before/after](docs/results/perf/before_after.md)).
 
 ![Simulation time vs processes](docs/results/bench.png)
 

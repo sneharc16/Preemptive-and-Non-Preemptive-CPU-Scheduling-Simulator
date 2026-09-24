@@ -4,6 +4,28 @@ All notable changes are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.0.1] - 2026-09-24
+
+### Fixed
+
+- Heavy-tail experiment: every process now has priority 0, 100 tickets and
+  nice 0, so CFS-lite is compared on equal terms (its mean slowdown at
+  alpha = 1.1 is 4.71, not 7.00; from alpha = 1.5 on it beats Round Robin).
+  The policy-comparison takeaway notes that weighted policies use the
+  generator's random weights.
+- `--gap` text output says "below" when a preemptive policy beats the
+  non-preemptive optimum, instead of printing a negative "above".
+- `make perf-compare` finds its baseline commit by subject, so rewriting
+  history no longer breaks it.
+- Web visualiser: metrics columns use consistent decimals.
+
+### Changed
+
+- Web visualiser redesign: sidebar setup, highlight tiles, animated
+  timeline with speed control, shareable links, light/dark toggle, and a
+  results-first layout on phones.
+- `docs/results` regenerated and labelled with the commit that produced it.
+
 ## [2.0.0] - 2026-09-23
 
 A rewrite from a single file into a tested, modular scheduling lab. The
